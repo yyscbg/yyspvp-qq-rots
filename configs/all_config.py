@@ -28,3 +28,7 @@ robot_key = all_config["feishu"]["robot_key"]
 # redis配置
 redis_config = all_config["redis_config"]
 
+# 机器人路径
+# bots_path = all_config["bots_path"]
+# es配置
+es_config = all_config.get("es_config")
