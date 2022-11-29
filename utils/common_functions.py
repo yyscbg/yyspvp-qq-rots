@@ -31,9 +31,9 @@ def update_sql(sql, cursor_type=True):
     try:
         my_sql = YysMysql(cursor_type=cursor_type)
         mysql_handle = my_sql.sql_open(mysql_config)
-        data = my_sql.update_mysql_record(mysql_handle, sql)
+        my_sql.update_mysql_record(mysql_handle, sql)
         mysql_handle.close()
-        return data
+        return True
     except Exception as e:
         print(e)
         return False

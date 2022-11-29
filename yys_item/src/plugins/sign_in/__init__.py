@@ -24,4 +24,5 @@ async def group_sign_in(event: GroupMessageEvent):
     if str(event.group_id) in yyspvp_accept_group:
         _qq = event.user_id
         lovelive_send = search_login_status(_qq)
+        print(lovelive_send)
         await qd.send(Message(lovelive_send), at_sender=True)

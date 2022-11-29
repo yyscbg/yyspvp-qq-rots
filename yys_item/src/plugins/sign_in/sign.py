@@ -17,16 +17,20 @@ def search_login_status(qq, score=10):
     :param qq: qq号
     :return:
     """
-    send = "签到失败，系统出错，请联系管理员！"
+    send = ""
     sql = f"select * from qq_robots.user_infos where qq='{qq}'"
     result = select_sql(sql)
+    print(result)
     if result:
         sign_date = result[0]["sign_date"]
         if str(get_now_date()) == sign_date:
             send = '你已经签到过了，明天再来吧'
-    else:
-        user_sign_in(qq, score)
-        send = f'签到成功，获得{score}积分'
+
+    if send == "":
+        if user_sign_in(qq, score):
+            send = f'签到成功，获得{score}积分'
+        else:
+            send = "签到失败，系统出错，请联系管理员！"
     return send
 
 
@@ -45,4 +49,5 @@ def user_sign_in(qq, score, sign_date=None):
           f"VALUES('{qq}', '{sign_date}', {score}, 1, '{update_time}') ON DUPLICATE KEY UPDATE " \
           f"qq='{qq}', score=VALUES(score)+{score}, sign_num=VALUES(sign_num)+1, sign_date='{sign_date}', " \
           f"update_time='{update_time}';"
-    update_sql(sql)
+    print(sql)
+    return update_sql(sql)
