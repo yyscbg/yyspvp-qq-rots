@@ -11,12 +11,7 @@ import platform
 from functools import reduce
 from utils.yys_config import YamlConfig
 
-if platform.system() == 'Linux':
-    base_config_file = "/home/yys/yys_project/config.yaml"
-    if not os.path.exists(base_config_file):
-        base_config_file = "/www/wwwroot/yys_project/backend/config.yaml"
-else:
-    base_config_file = os.path.join(reduce(lambda x, _: os.path.dirname(x), range(2), __file__), 'config.yaml')
+base_config_file = os.path.join(reduce(lambda x, _: os.path.dirname(x), range(2), __file__), 'config.yaml')
 
 print(base_config_file)
 
