@@ -6,7 +6,7 @@
 @FileName: asynv_request_search.py
 @Detail:
 """
-from search_about_hat import search_month_blue_hat, search_all_server_blue_hat, search_month_red_hat
+from .search_about_hat import search_month_blue_hat, search_all_server_blue_hat, search_month_red_hat
 
 
 async def get_month_blue_hat(server_code: str):
