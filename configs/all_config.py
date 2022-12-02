@@ -27,7 +27,9 @@ mysql_config = all_config["mysql_config"]
 robot_key = all_config["feishu"]["robot_key"]
 # redis配置
 redis_config = all_config["redis_config"]
-
+# 代理配置
+proxy_url = all_config.get('proxy_url', None)
+http_prefix = all_config.get('http_prefix', None)
 # 机器人路径
 # bots_path = all_config["bots_path"]
 # es配置
