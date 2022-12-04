@@ -82,7 +82,8 @@ def parse_yyscbg_url(game_ordersn=None):
         while True:
             datas = get_infos(game_ordersn)
             if datas:
-                history_price = "无"
+                history_price = "暂无"
+                history_url = "暂无"
                 datas = get_speed_info(datas)
                 equip_name = datas["equip_name"]
                 server_name = datas["server_name"]
@@ -104,10 +105,13 @@ def parse_yyscbg_url(game_ordersn=None):
                 _history = select_sql(sql)
                 if _history:
                     history_price = _history[0]["price"]
+                    game_ordersn = _history[0]["game_ordersn"]
+                    server_id = game_ordersn.split('-')[1]
+                    history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
                 _prompt = f"ID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n高亮文字: {highlights}\n" \
-                          f"价格: {int(price)}\n历史价格: {history_price}\n" \
+                          f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
                           f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
-                          f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}" \
+                          f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
                           f"{get_suit_str(suit_speed)}"
                 print(_prompt)
                 break
