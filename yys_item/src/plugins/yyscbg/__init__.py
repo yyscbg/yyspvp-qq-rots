@@ -101,7 +101,8 @@ def parse_yyscbg_url(game_ordersn=None):
                 dk_info = speed_infos["dk_info"]
                 suit_speed = datas["suit_speed"]
                 sql = f"select * from yys_cbg.all_cbg_url where equip_name='{equip_name}' and server_name='{server_name}'" \
-                      f"and status_des=3 order by create_time desc"
+                      f"and status_des=3 and game_ordersn!='{game_ordersn}' order by create_time desc"
+                print(sql)
                 _history = select_sql(sql)
                 if _history:
                     history_price = _history[0]["price"]
