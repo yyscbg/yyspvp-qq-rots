@@ -245,7 +245,7 @@ class CbgDataParser:
         equip = datas.get('equip', None)
         if not equip:
             print("no equip")
-            return None
+            return False
 
         # seller_roleid = equip["seller_roleid"]
         seller_roleid = ""
@@ -453,6 +453,8 @@ def get_speed_info(json_data, full_speed=150):
     """
     parse = CbgDataParser()
     data = parse.cbg_parse(json_data)
+    if not data:
+        return False
     yuhun_json = parse.init_yuhun(data["inventory"])
     # 御魂分组1-6
     data_info = parse.sort_pos(yuhun_json)

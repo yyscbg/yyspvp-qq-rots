@@ -12,7 +12,7 @@ import time
 from functools import reduce
 
 from .build_image import BuildImage
-from picture_watermark import Font, Watermark
+from .picture_watermark import Font, Watermark
 
 bd_img = BuildImage()
 
