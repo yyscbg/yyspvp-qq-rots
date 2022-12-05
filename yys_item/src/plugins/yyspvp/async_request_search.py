@@ -11,17 +11,17 @@ from .search_about_hat import search_month_blue_hat, search_all_server_blue_hat,
 
 async def get_month_blue_hat(server_code: str):
     """获取一个月内特定区蓝帽子分数线"""
-    return await search_month_blue_hat("yys_server", server_code)
+    return search_month_blue_hat("yys_server", server_code)
 
 
 async def get_all_server_blue_hat(date_time: str):
     """获取所有区特定周蓝帽子分数线"""
-    return await search_all_server_blue_hat(date_time)
+    return search_all_server_blue_hat(date_time)
 
 
 async def get_month_red_hat(date_time: str = None):
     """获取某周红帽子分数线"""
-    return await search_month_red_hat(date_time)
+    return search_month_red_hat(date_time)
 
 
 async def get_player_infos_card():
