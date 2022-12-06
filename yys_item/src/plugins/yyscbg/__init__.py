@@ -84,6 +84,8 @@ def parse_yyscbg_url(game_ordersn=None):
             if datas:
                 history_price = "暂无"
                 history_url = "暂无"
+                server_id = game_ordersn.split('-')[1]
+                current_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
                 datas = get_speed_info(datas)
                 equip_name = datas["equip_name"]
                 server_name = datas["server_name"]
@@ -109,7 +111,8 @@ def parse_yyscbg_url(game_ordersn=None):
                     game_ordersn = _history[0]["game_ordersn"]
                     server_id = game_ordersn.split('-')[1]
                     history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
-                _prompt = f"ID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n高亮文字: {highlights}\n" \
+                _prompt = f"\n当前链接：{current_url}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
+                          f"高亮文字: {highlights}\n" \
                           f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
                           f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
                           f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
