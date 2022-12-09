@@ -86,6 +86,12 @@ def parse_yyscbg_url(game_ordersn=None):
                 server_id = game_ordersn.split('-')[1]
                 current_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
                 datas = get_speed_info(datas)
+                if not datas:
+                    if _num >= 3:
+                        break
+                    _num += 1
+                    _prompt = "代理出错，请重试"
+                    continue
                 equip_name = datas["equip_name"]
                 server_name = datas["server_name"]
                 status_des = datas["status_des"]
