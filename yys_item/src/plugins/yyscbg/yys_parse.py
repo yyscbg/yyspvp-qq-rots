@@ -332,19 +332,31 @@ class CbgDataParser:
         }
 
 
-def cal_speed_sum_num(data_info, n):
-    """
-    计算独立散件速度
-    :param data_info:
-    :param n:
-    :return:
-    """
+def get_speeds_all(data_info):
+    """获取所有含有速度御魂"""
     speeds_all = {}
     for i in range(1, 7):
         num = str(i)
         data_info[num] = select_speed(data_info[num])
         speeds_all[num] = list_dict_order_by_key(data_info[num], "速度")
+    return speeds_all
 
+
+def remove_independent_speed(speeds_all, n):
+    """移除独立速度"""
+    for i in range(1, 7):
+        for x in range(n):
+            del speeds_all[str(i)][n - 1]
+    return speeds_all
+
+
+def cal_speed_sum_num(speeds_all, n):
+    """
+    计算独立散件速度
+    :param speeds_all: 含有速度所有御魂列表
+    :param n:
+    :return:
+    """
     _sum = 0
     speeds_list = []
     for i in range(1, 7):
@@ -355,7 +367,7 @@ def cal_speed_sum_num(data_info, n):
         info = {"位置": i, "类型": yh_type, "速度": round(speed, 8)}
         speeds_list.append(info)
 
-    return speeds_all, _sum, speeds_list
+    return _sum, speeds_list
 
 
 def filter_chinese(sp_li):
@@ -458,20 +470,32 @@ def get_speed_info(json_data, full_speed=150):
     yuhun_json = parse.init_yuhun(data["inventory"])
     # 御魂分组1-6
     data_info = parse.sort_pos(yuhun_json)
-    # 速度御魂列表、散件满速、散件列表
-    speeds_all, sj_sum, speeds_sj_list = cal_speed_sum_num(data_info, 1)
+    # 速度御魂列表
+    speeds_all = get_speeds_all(data_info)
+    # 散件满速、散件列表
+    sj_sum, speeds_sj_list = cal_speed_sum_num(speeds_all, 1)
+    sj_sum2, speeds_sj_list_2 = cal_speed_sum_num(speeds_all, 2)
+    # 除散件一速后独立招财
+    speeds_all2 = remove_independent_speed(speeds_all, 2)
+    sp_list, sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
     # 命中、抵抗
     mz_info, dk_info = parse.find_yuhun_mzdk(speeds_all)
     # 二号位
     head_info = parse.find_yuhun_head(speeds_all)
-
-    fast_speed_list = [{
-        # "suit_name": "san_jian",
-        "suit_name": "散件",
-        "speed_sum": sj_sum,
-        "speed_list": list(filter_chinese(speeds_sj_list)),
-        # "speed_list": speeds_sj_list,
-    }]
+    # 散件一速
+    fast_speed_list = [
+        {
+            "suit_name": "散件",
+            "speed_sum": sj_sum,
+            "speed_list": list(filter_chinese(speeds_sj_list)),
+            # "speed_list": speeds_sj_list,
+        },
+        {
+            "suit_name": "除散件外独立招财",
+            "speed_sum": sp_sum,
+            "speed_list": list(filter_chinese(sp_list)),
+        }
+    ]
     # 默认筛选套装满速大于150
     for suit_name in parse.yuhun_list:
         sp_list, sp_sum = cal_suit_speed(speeds_all, speeds_sj_list, suit_name)

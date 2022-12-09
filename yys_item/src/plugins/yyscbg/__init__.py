@@ -21,8 +21,7 @@ from .yys_parse import get_speed_info
 
 config = get_driver().config.dict()
 
-# yyspvp_accept_group = config.get('yyspvp_accept_group', [])
-yyspvp_accept_group = ["569426079"]
+yyscbg_accept_group = config.get('yyscbg_accept_group', [])
 
 
 async def group_checker(event: Event) -> bool:
@@ -34,7 +33,7 @@ async def group_checker(event: Event) -> bool:
     _group = re.findall("group_(\\d+)_", event.get_session_id())
     if _group:
         group_id = _group[0]
-    if group_id in yyspvp_accept_group:
+    if group_id in yyscbg_accept_group:
         flag = True
     return flag
 
@@ -81,7 +80,7 @@ def parse_yyscbg_url(game_ordersn=None):
         _num = 1
         while True:
             datas = get_infos(game_ordersn)
-            if datas:
+            if datas and not isinstance(datas, str):
                 history_price = "暂无"
                 history_url = "暂无"
                 server_id = game_ordersn.split('-')[1]
@@ -92,8 +91,7 @@ def parse_yyscbg_url(game_ordersn=None):
                 status_des = datas["status_des"]
                 highlights = datas["highlights"]
                 price = datas["price"]
-                yuhun_buff = int(datas["yuhun_buff"])/3600/24
-                yuhun_buff = str(round(yuhun_buff, 2)) + "天" if yuhun_buff > 24 else str(round(yuhun_buff, 2)) + "时"
+                yuhun_buff = cal_time(datas["yuhun_buff"])
                 goyu = datas["goyu"]
                 hunyu = datas["hunyu"]
                 strength = datas["strength"]
@@ -116,8 +114,7 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
                           f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
                           f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
-                          f"{get_suit_str(suit_speed)}"
-                print(_prompt)
+                          f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}"
                 break
             else:
                 if _num >= 3:
@@ -127,9 +124,33 @@ def parse_yyscbg_url(game_ordersn=None):
     return _prompt
 
 
+def cal_time(n_seconds: int):
+    """
+    计算加成时间
+    :param n_seconds: 秒
+    :return:
+    """
+    hour = round(n_seconds / 3600, 2)
+    if hour >= 24:
+        return str(round(hour / 24, 1)) + "天"
+    else:
+        return str(hour) + "时"
+
+
 def get_str(_array):
     return ", ".join(list(map(lambda info: f"{info['yh_type']}: {round(info['speed'], 3)}", _array)))
 
 
-def get_suit_str(_array):
+def get_pos_str(items):
+    """各个位置字符串"""
+    return "\n" + ", ".join(
+        list(map(lambda item: f"p{item['pos']}-{item['yh_type']}:{round(item['speed'], 2)}", items)))
+
+
+def get_suit_str(_array, is_detail=False):
+    """套装字符串"""
+    if is_detail:
+        return "\n".join(list(map(lambda info: f"{info['suit_name']}: {round(info['speed_sum'], 3)}"
+                                               f"{get_pos_str(info['speed_list']) if info['suit_name'] == '除散件外独立招财' else ''}",
+                                  _array)))
     return "\n".join(list(map(lambda info: f"{info['suit_name']}: {round(info['speed_sum'], 3)}", _array)))
