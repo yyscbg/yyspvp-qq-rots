@@ -11,8 +11,8 @@ import os
 import time
 from functools import reduce
 
-from build_image import BuildImage
-from picture_watermark import Font, Watermark
+from .build_image import BuildImage
+from .picture_watermark import Font, Watermark
 
 bd_img = BuildImage()
 
@@ -92,7 +92,7 @@ def run_image(datas, title, _type=None):
             table_content += __content
 
     image_path = os.path.join(base_path, "image")
-    image_file = "temp" + str(time.time() * 1000)[:13] + "." + ".png"
+    image_file = "temp" + str(time.time() * 1000)[:13] + ".png"
     save_image_file = os.path.join(image_path, "temp_cut_" + str(time.time() * 1000)[:13] + ".png")
 
     try:
