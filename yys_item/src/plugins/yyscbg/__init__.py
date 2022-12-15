@@ -86,6 +86,7 @@ def parse_yyscbg_url(game_ordersn=None):
                 server_id = game_ordersn.split('-')[1]
                 current_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
                 datas = get_speed_info(datas)
+                print(datas)
                 if not datas:
                     if _num >= 3:
                         break
@@ -106,8 +107,14 @@ def parse_yyscbg_url(game_ordersn=None):
                 mz_info = speed_infos["mz_info"]
                 dk_info = speed_infos["dk_info"]
                 suit_speed = datas["suit_speed"]
+                create_time = datas["create_time"]
+                fengzidu = datas["fengzidu"]
+                yard_str = "、 ".join(datas["yard_list"])
+                dc_str = "、 ".join(datas["dc_list"])
+                shouban_str = "、 ".join(datas["shouban_list"])
                 sql = f"select * from yys_cbg.all_cbg_url where equip_name='{equip_name}' and server_name='{server_name}'" \
-                      f"and status_des=3 and game_ordersn!='{game_ordersn}' order by create_time desc"
+                      f" and status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}' " \
+                      f"order by create_time desc"
                 print(sql)
                 _history = select_sql(sql)
                 if _history:
@@ -119,8 +126,13 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"高亮文字: {highlights}\n" \
                           f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
                           f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
+                          f"============================\n" \
                           f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
-                          f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}"
+                          f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
+                          f"============================\n" \
+                          f"风姿度: {fengzidu}\n" \
+                          f"庭院: {yard_str}\n典藏: {dc_str}\n"\
+                          f"手办框: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n氪金: {datas['kejin_str']}"
                 break
             else:
                 if _num >= 3:

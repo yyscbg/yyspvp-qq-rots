@@ -8,15 +8,52 @@
 """
 import os
 import json
-import hashlib
 import requests
 from pypinyin import pinyin, Style, lazy_pinyin
 
+from utils.common_functions import get_md5
 
-def get_md5(_str):
-    m = hashlib.md5()
-    m.update(bytes(_str, encoding='utf-8'))
-    return m.hexdigest()
+# 典藏皮肤
+dc_skin = [
+    "永夜无眠", "炎义丹襟", "莲华一梦", "天曜神行",
+    "晴海千花", "华光赤堇", "灭道殉神", "百鬼夜行",
+    "琥珀龙魂", "金鳞航梦", "蛉魂梦使", "浮生若梦",
+    "星坠之风", "福鲤霓裳", "锦羽金鹏", "胧月",
+    "古桥水巷", "花引冥烛", "蝶步韶华", "响魂醉曲",
+    "青莲蜕梦", "晴雨伴虹", "青鸾华影", "睦月神祈",
+    "紫藤花烬", "化烟", "神宫金社"
+]
+# 庭院皮肤
+ty_skin = [
+    "天穹之境", "烬夜韶阁", "织梦莲庭",
+    "暖池青苑", "远海航船", "盛夏幽庭",
+    "枫色秋庭", "雪月华庭", "暖春翠庭"
+]
+# 手办框
+shouban_head = [
+    "麓鸣烁浪", "彼岸天光", "玉面妖狐", "大江山之主",
+    "契", "神意御骨", "倦鸟眠花", "年年有余",
+    "闲春寄鸢", "金羽焕夜",
+]
+# 崽战
+zaizhan_list = [
+    ("901224", "战·百鬼之主"), ("901154", "百鬼之主"),
+    ("901225", "战·大阴阳师"), ("901153", "大阴阳师"),
+    ("901152", "京都名士")
+]
+# 氪金
+kejin_list = [
+    ("901130", "京都之主"), ("901240", "鲤跃金松")
+]
+yaozhige_list = [
+    "金曜符纸", "琉金凤蝶", "金霜之叶", "金之华坠",
+    "金鳞云龙", "金瞳妖影", "凤鸣金羽", "御风金影",
+    "流金纸扇·守", "璃金纸伞·狱", "金凰法杖·陨", "散金箭矢·诛",
+    "流金纸扇·星", "璃金纸伞·疾", "金凰法杖·卜", "散金箭矢·影",
+    "随云吟啸", "寇梢含枝", "青羽衔铃", "影山豹形", "隐金游龙",
+    "迷金掠蝶", "辰落虚凰", "杏鸣穿金", "流金纸扇·灭",
+    "璃金纸伞·蝶", "金凰法杖·咒", "散金箭矢·探",
+]
 
 
 def select_speed(dts):
@@ -112,7 +149,7 @@ class CbgDataParser:
             max_info = {"yh_type": value_list[0]["yh_type"], "max_value": value_list[0]["speed"]}
         return {"sum_value": sum_value, "max_info": max_info, "value_list": value_list}
 
-    def find_yuhun_head(self, data_info):
+    def find_yuhun_head(self, data_info, is_abridge=True, min_value=15):
         """
         查找二号位满速
         :param data_info:
@@ -123,13 +160,15 @@ class CbgDataParser:
             if "速度" in data:
                 if data["速度"] > 72:
                     speed = round(data["速度"] - 57, 5)
-                    # yh_type = get_abridge(data["类型"])
-                    yh_type = data["类型"]
+                    if is_abridge:
+                        yh_type = get_abridge(data["类型"])
+                    else:
+                        yh_type = data["类型"]
                     value = {"yh_type": yh_type, "speed": speed}
                     head_info.append(value)
         return self.set_speed_infos(head_info)
 
-    def find_yuhun_mzdk(self, data_info):
+    def find_yuhun_mzdk(self, data_info, is_abridge=True):
         """
         查找命中、抵抗满速（筛选四号位、含速度、大于15速、主属性55以上）
         :param data_info:
@@ -144,8 +183,10 @@ class CbgDataParser:
                         if pos4_name in data:
                             if data[pos4_name] >= 55:
                                 speed = round(data["速度"], 8)
-                                # yh_type = get_abridge(data["类型"])
-                                yh_type = data["类型"]
+                                if is_abridge:
+                                    yh_type = get_abridge(data["类型"])
+                                else:
+                                    yh_type = data["类型"]
                                 value = {"yh_type": yh_type, "speed": speed}
                                 if "抵抗" in pos4_name:
                                     yuhun_dk.append(value)
@@ -199,8 +240,8 @@ class CbgDataParser:
             mitama_info = inventory[mitama_id]
             if int(mitama_info['level']) < 15:
                 continue
-            mitama_pos = str(mitama_info['pos'])
-            mitama_name = mitama_info['name']
+            mitama_pos = str(mitama_info['pos'])  # 位置pos
+            mitama_name = mitama_info['name']  # 御魂名称
             mitama_attrs = dict()
             if 'rattr' in mitama_info:
                 # 主属性从attrs获取
@@ -219,7 +260,6 @@ class CbgDataParser:
                         mitama_attrs[prop] = value
                     else:
                         mitama_attrs[prop] += value
-
             mitama_attrs["位置"] = mitama_pos
             mitama_attrs["类型"] = mitama_name
             mitama_attrs_all.append(mitama_attrs)
@@ -244,6 +284,7 @@ class CbgDataParser:
         """藏宝阁数据解析"""
         equip = datas.get('equip', None)
         if not equip:
+            print(datas)
             print("no equip")
             return None
 
@@ -265,26 +306,63 @@ class CbgDataParser:
         create_time = equip["create_time"]  # 时间
         collect_num = equip["collect_num"]  # 收藏
         equip_desc = json.loads(equip["equip_desc"])
+        fengzidu = equip_desc.get('fengzidu', 0)  # 风姿度
         sign_days = equip_desc["sign_days"]  # 签到时间
         yuhun_buff = equip_desc.get('yuhun_buff', -1)  # 御魂加成
         money = equip_desc.get('money', 0)  # 金币
         goyu = equip_desc.get('goyu', 0)  # 勾玉
         hunyu = equip_desc.get('hunyu', 0)  # 魂玉
         strength = equip_desc.get('strength', 0)  # 体力
-        gameble_card = equip_desc.get('gameble_card', 0)  # 结界卡
+        gameble_card = equip_desc.get('gameble_card', 0)  # 蓝票
         equips_summary = equip_desc["equips_summary"]  # 御魂总数
         level_15 = equip_desc["level_15"]  # 15+御魂
-
         currency_900217 = equip_desc.get('currency_900217', 0)  # 逆鳞
         currency_900218 = equip_desc.get('currency_900218', 0)  # 逢魔之魂
         currency_900041 = equip_desc.get('currency_900041', 0)  # 痴卷
         ar_gamble_card = equip_desc.get('ar_gamble_card', 0)  # 现实符咒
-        currency_900073 = equip_desc.get('currency_900073', 0)  # 蓝票
+        lbscards = equip_desc.get('lbscards', {})  # 结界卡
+        lbscards_sum = 0
+        if lbscards:
+            for k, v in lbscards.items():
+                lbscards_sum += int(v["num"])
+        skin = equip_desc["skin"]  # 皮肤 dict
+        yard_list = [ty for ty in ty_skin if ty in list(map(lambda x: x[1], skin.get('yard', [])))]  # 庭院
+        yaozhige = int((len(skin["guard"]) - 4) / 2)
+        head_skin = equip_desc["head_skin"]  # 头像框
+        shouban_list = [value for key, value in head_skin.items() if value in shouban_head]  # 手办框
+        data_skin_hero = [item[1] for item in skin['ss']]
+        dc_list = [name for name in dc_skin if name in data_skin_hero]  # 典藏皮肤
+        yzg = equip_desc["yzg"]  # 曜之阁
+        yzq = equip_desc["currency_900073"]  # 曜之契
+        yzg_number = (len(yzg.get('effect', [])) + yzq) / 2  # 曜之阁期数
+        head_skin_count = equip_desc["head_skin_count"]
+        # 崽战
+        _zaizhan = list(
+            map(
+                lambda x: f"{head_skin_count[x[0]] + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[
+                                                                                                          0] in head_skin_count else False,
+                zaizhan_list
+            )
+        )
+        zaizhan_str = ", ".join([_ for _ in _zaizhan if _ is not False])
+        # 氪金
+        _kejin = list(
+            map(
+                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[
+                                                                                            0] in head_skin_count else False,
+                kejin_list
+            )
+        )
+        yzg_str = f"{int(yzg_number)}期曜之阁" if yzg_number != 0 else ""
+        if len(yzg_str) == 0:
+            kejin_str = ", ".join([_ for _ in _kejin if _ is not False])
+        else:
+            kejin_str = yzg_str
+
         inventory = None
         if is_yuhun:
             inventory = equip_desc.get('inventory', None)  # 御魂
 
-        # skin = equip_desc["skin"]                                             # 皮肤 dict
         # gouyu_card = equip_desc.get('gouyu_card', 0)                          # 太鼓
         # pvp_score = equip_desc["pvp_score"]                                   # 斗技分数
         # honor_score = equip_desc["honor_score"]                               # 荣誉
@@ -300,35 +378,26 @@ class CbgDataParser:
         # currency_900007 = equip_desc.get('currency_900007', 0)                # 百鬼夜行门票
 
         return {
-            "new_roleid": new_roleid,
-            "seller_roleid": seller_roleid,
-            "equip_name": seller_name,
-            "server_name": server_name,
-            "create_time": create_time,
-            "status_des": status_desc,
-            "collect_num": collect_num,
-            "fair_show_end_time": fair_show_end_time,
-            "platform_type": platform_type,
-            "equip_level": equip_level,
-            "highlights": ",".join(highlights),
-            "equip_server_sn": equip_server_sn,
-            "desc_sumup_short": desc_sumup_short,
-            "price": price,
-            "sign_days": sign_days,
-            "yuhun_buff": yuhun_buff,
-            "level_15": level_15,
-            "money": money,
-            "goyu": goyu,
-            "hunyu": hunyu,
-            "strength": strength,
-            "gameble_card": gameble_card,
-            "equips_summary": equips_summary,
-            "currency_900217": currency_900217,
-            "currency_900218": currency_900218,
-            "currency_900041": currency_900041,
-            "ar_gamble_card": ar_gamble_card,
-            "inventory": inventory,
-            "currency_900073": currency_900073
+            "new_roleid": new_roleid, "seller_roleid": seller_roleid,
+            "equip_name": seller_name, "server_name": server_name,
+            "create_time": create_time, "status_des": status_desc,
+            "collect_num": collect_num, "fair_show_end_time": fair_show_end_time,
+            "platform_type": platform_type, "equip_level": equip_level,
+            "highlights": ",".join(highlights), "equip_server_sn": equip_server_sn,
+            "desc_sumup_short": desc_sumup_short, "price": price,
+            "sign_days": sign_days, "yuhun_buff": yuhun_buff,
+            "level_15": level_15, "money": money, "goyu": goyu,
+            "hunyu": hunyu, "strength": strength, "gameble_card": gameble_card,
+            "equips_summary": equips_summary, "currency_900217": currency_900217,
+            "currency_900218": currency_900218, "currency_900041": currency_900041,
+            "ar_gamble_card": ar_gamble_card, "inventory": inventory,
+            "lbscards_sum": lbscards_sum, "fengzidu": fengzidu,
+            "yard_list": yard_list,
+            "yaozhige": yaozhige if yaozhige > 0 else None,
+            "shouban_list": shouban_list,
+            "dc_list": dc_list,
+            "zaizhan_str": zaizhan_str,
+            "kejin_str": kejin_str,
         }
 
 
@@ -344,10 +413,11 @@ def get_speeds_all(data_info):
 
 def remove_independent_speed(speeds_all, n):
     """移除独立速度"""
+    new_speeds_all = speeds_all.copy()
     for i in range(1, 7):
         for x in range(n):
-            del speeds_all[str(i)][n - 1]
-    return speeds_all
+            del new_speeds_all[str(i)][n - 1]
+    return new_speeds_all
 
 
 def cal_speed_sum_num(speeds_all, n):
@@ -360,7 +430,6 @@ def cal_speed_sum_num(speeds_all, n):
     _sum = 0
     speeds_list = []
     for i in range(1, 7):
-        # pos = i
         speed = speeds_all[str(i)][n - 1]["速度"]
         yh_type = speeds_all[str(i)][n - 1]["类型"]
         _sum += speed
@@ -390,6 +459,26 @@ def filter_chinese(sp_li):
         yield speed
 
 
+def get_suit_pos_fast_speed(speeds_all, suit_name="招财猫"):
+    """
+    获取套装各个位置最快速度
+    :param speeds_all:
+    :param suit_name:
+    :return:
+    """
+    speeds_list = []
+    for i in range(1, 7):
+        for y in speeds_all[str(i)]:
+            if y["类型"] == suit_name:
+                speeds_list.append({
+                    "位置": i,
+                    "类型": y["类型"],
+                    "速度": round(y["速度"], 8) if y["速度"] else 0
+                })
+                break
+    return speeds_list
+
+
 def cal_suit_speed(speeds_all, speed_sj_list, suit_name="招财猫"):
     """
     计算套装一速
@@ -398,25 +487,10 @@ def cal_suit_speed(speeds_all, speed_sj_list, suit_name="招财猫"):
     :param suit_name: 御魂类型
     :return:
     """
-    speed_list = []
     sp_list = []
-    for i in range(1, 7):
-        pos = i
-        for y in speeds_all[str(pos)]:
-            # speed = 0
-            if y["类型"] == suit_name:
-                speed = y["速度"]
-                _type = y["类型"]
-                speed_zc = {
-                    "位置": pos,
-                    "类型": _type,
-                    "速度": round(speed, 8) if speed else 0
-                }
-                speed_list.append(speed_zc)
-                break
-    # print(speed_zc_list)
     sp_sum = 0
     compare = [1, 2, 3, 4, 5, 6]
+    speed_list = get_suit_pos_fast_speed(speeds_all, suit_name)
     lens = len(speed_list)
     for a in range(0, lens):
         for b in range(a + 1, lens):
@@ -465,30 +539,28 @@ def get_speed_info(json_data, full_speed=150):
     """
     parse = CbgDataParser()
     data = parse.cbg_parse(json_data)
-    if data is None:
-        return False
     yuhun_json = parse.init_yuhun(data["inventory"])
     # 御魂分组1-6
     data_info = parse.sort_pos(yuhun_json)
     # 速度御魂列表
     speeds_all = get_speeds_all(data_info)
+    # 二号位
+    head_info = parse.find_yuhun_head(speeds_all, False)
+    # 命中、抵抗
+    mz_info, dk_info = parse.find_yuhun_mzdk(speeds_all, False)
     # 散件满速、散件列表
     sj_sum, speeds_sj_list = cal_speed_sum_num(speeds_all, 1)
     sj_sum2, speeds_sj_list_2 = cal_speed_sum_num(speeds_all, 2)
     # 除散件一速后独立招财
     speeds_all2 = remove_independent_speed(speeds_all, 2)
     sp_list, sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
-    # 命中、抵抗
-    mz_info, dk_info = parse.find_yuhun_mzdk(speeds_all)
-    # 二号位
-    head_info = parse.find_yuhun_head(speeds_all)
+
     # 散件一速
     fast_speed_list = [
         {
             "suit_name": "散件",
             "speed_sum": sj_sum,
             "speed_list": list(filter_chinese(speeds_sj_list)),
-            # "speed_list": speeds_sj_list,
         },
         {
             "suit_name": "除散件外独立招财",
@@ -496,6 +568,8 @@ def get_speed_info(json_data, full_speed=150):
             "speed_list": list(filter_chinese(sp_list)),
         }
     ]
+    # print(fast_speed_list)
+    # 独立招财
     # 默认筛选套装满速大于150
     for suit_name in parse.yuhun_list:
         sp_list, sp_sum = cal_suit_speed(speeds_all, speeds_sj_list, suit_name)
@@ -520,15 +594,52 @@ def get_speed_info(json_data, full_speed=150):
 
 
 if __name__ == '__main__':
-    game_ordersn = "202210302101616-12-Q4GEFZSWWJUNV"
-    from configs.all_config import dir_path
-
-    file = os.path.join(dir_path, game_ordersn + ".json")
+    game_ordersn = "202212042101616-12-OTUU52VLMAQHO"
+    game_ordersn = "202212090901616-11-4E1Y8DJCKGP6J"
+    # game_ordersn = "202212092301616-12-4KCXKCSVWCKGM"
+    game_ordersn = "202212031101616-12-ZHGU5BC5FIK5B"  # 百鬼之主
+    # game_ordersn = "202210302101616-12-Q4GEFZSWWJUNV"
+    # game_ordersn = "202211091201616-7-Z3VMTFBMHISOHI"
+    file = game_ordersn + ".json"
     with open(file, "r") as f:
         json_data = json.loads(f.read())
+    equip_desc = json.loads(json_data["equip"]["equip_desc"])
+
+    del equip_desc["inventory"]
+    del equip_desc["hero_fragment"]
+    del equip_desc["lbscards"]
+    del equip_desc["hero_count_dict"]
+    del equip_desc["heroes"]
+    del equip_desc["prefab_team"]  # 预设阵容
+
+    print(equip_desc)
+    # 崽战
+    zaizhan_list = [
+        ("901224", "战·百鬼之主"), ("901154", "百鬼之主"),
+        ("901225", "战·大阴阳师"), ("901153", "大阴阳师"),
+        ("901152", "京都名士")
+    ]
+    # 氪金
+    kejin_list = [
+        ("901130", "京都之主"), ("901240", "鲤跃金松")
+    ]
+
+    # head_skin_count = equip_desc["head_skin"]
+    # skin = equip_desc["skin"]
+    # print(head_skin_count)
+    # print(skin["guard"])
+    # parse = CbgDataParser()
+    # data = parse.cbg_parse(json_data)
+    # print(data["yaozhige"])
+    # yuhun_json = parse.init_yuhun(data["inventory"])
+    # # 御魂分组1-6
+    # data_info = parse.sort_pos(yuhun_json)
+    # # print(data_info)
+    # datas = get_speed_info(json_data)
+    # print(datas)
     # info = get_speed_info(json_data, 0)
     # print(info)
     # print(len(info["suit_speed"]))
-    parse = CbgDataParser()
-    data = parse.cbg_parse(json_data, is_yuhun=False)
-    print(data)
+    # parse = CbgDataParser()
+    # data = parse.cbg_parse(json_data, is_yuhun=False)
+    # print(data)

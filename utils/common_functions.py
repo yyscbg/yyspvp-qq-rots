@@ -6,11 +6,20 @@
 @FileName: common_functions.py
 @Detail: 通用函数
 """
-import os, json
+import os
+import json
 import requests
+import hashlib
+import numpy as np
 
 from utils.yys_mysql import YysMysql
 from configs.all_config import mysql_config
+
+
+def get_md5(_str):
+    m = hashlib.md5()
+    m.update(bytes(_str, encoding='utf-8'))
+    return m.hexdigest()
 
 
 def select_sql(sql, cursor_type=True):
@@ -57,22 +66,36 @@ def score_to_star(score):
     return star
 
 
-def get_shishen_name(shishen_json, _id):
-    master_id = [10, 11, 12, 13, 14]
-    master_name = ["晴明", "神乐", "八百比丘尼", "源博雅"]
-    if _id not in [900, 901, 902, 903]:
-        try:
-            if int(_id) in master_id:
-                shishen_name = master_name[master_id.index(int(_id))]
-            else:
-                shishen_name = shishen_json[str(_id)]["name"]
-        except Exception as e:
-            print(f"式神未更新：{e}")
-            shishen_name = ""
-        finally:
-            return shishen_name
+def check_platform(_type):
+    """判断平台"""
+    if _type == 2:
+        platform_type = "安卓"
+    elif _type == 1:
+        platform_type = "IOS"
     else:
-        return None
+        platform_type = "渠道"
+    return platform_type
+
+
+def sort_2D_array_by_column(arr, column_index, _sort=True):
+    """
+    二维数组按某一列排序
+    infos = [
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 2],
+        [10, 9, 8, 7, 6, 5, 4, 3, 4, 1, 1],
+        [2, 11, 1, 10, 6, 5, 4, 3, 1, 1, 3],
+    ]
+    :param arr: 二维数组
+    :param column_index: 某列下标索引
+    :param _sort: 默认降序
+    :return:
+    """
+    xx = np.array(arr)
+    if _sort:
+        result = xx[np.argsort(xx[:, column_index])][::-1]
+    else:
+        result = xx[xx[:, column_index].argsort()]
+    return result.tolist()
 
 
 def read_Or_request_json_file(fn=None, f_type=None):
@@ -89,3 +112,21 @@ def read_Or_request_json_file(fn=None, f_type=None):
         url = "https://s.166.net/config/bbs_yys/"
         url = url + f_type + ".json"
         return requests.get(url).json()
+
+
+def get_shishen_name(shishen_json, _id):
+    master_id = [10, 11, 12, 13, 14]
+    master_name = ["晴明", "神乐", "八百比丘尼", "源博雅"]
+    if _id not in [900, 901, 902, 903]:
+        try:
+            if int(_id) in master_id:
+                shishen_name = master_name[master_id.index(int(_id))]
+            else:
+                shishen_name = shishen_json[str(_id)]["name"]
+        except Exception as e:
+            print(f"式神未更新：{e}")
+            shishen_name = ""
+        finally:
+            return shishen_name
+    else:
+        return None
