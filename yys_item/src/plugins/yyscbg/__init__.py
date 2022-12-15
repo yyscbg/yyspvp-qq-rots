@@ -14,10 +14,13 @@ from nonebot.matcher import Matcher
 from nonebot.adapters import Message, Event
 from nonebot.adapters.onebot.v11 import MessageSegment, GroupMessageEvent, Bot
 
+from configs.all_config import mysql_config
 from utils.yys_proxy import ProxyTool
-from utils.common_functions import select_sql
+from utils.yys_time import get_now
+from utils.common_functions import select_sql, check_sale_flag
+from utils.yys_mysql import YysMysql
 from .yys_spider import get_equip_detail
-from .yys_parse import get_speed_info
+from .yys_parse import get_speed_info, CbgDataParser
 
 config = get_driver().config.dict()
 
@@ -79,14 +82,13 @@ def parse_yyscbg_url(game_ordersn=None):
     if game_ordersn:
         _num = 1
         while True:
-            datas = get_infos(game_ordersn)
-            if datas and not isinstance(datas, str):
+            infos = get_infos(game_ordersn)
+            if infos and not isinstance(infos, str):
                 history_price = "暂无"
                 history_url = "暂无"
                 server_id = game_ordersn.split('-')[1]
                 current_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
-                datas = get_speed_info(datas)
-                print(datas)
+                datas = get_speed_info(infos)
                 if not datas:
                     if _num >= 3:
                         break
@@ -128,6 +130,29 @@ def parse_yyscbg_url(game_ordersn=None):
                     game_ordersn = _history[0]["game_ordersn"]
                     server_id = game_ordersn.split('-')[1]
                     history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
+                else:
+                    search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
+                    if not search_res:
+                        print("入库新纪录", search_res)
+                        break
+                    # 不存在入库
+                    parse = CbgDataParser()
+                    payload = parse.cbg_parse(infos, is_yuhun=False)
+                    payload["status_des"] = check_sale_flag(payload["status_des"])
+                    infos = {
+                        "game_ordersn": game_ordersn,
+                        "status_des": payload["status_des"],
+                        "new_roleid": payload["new_roleid"],
+                        "equip_name": payload["equip_name"],
+                        "server_name": payload["server_name"],
+                        "create_time": payload["create_time"],
+                        "price": payload["price"],
+                        "update_time": get_now(),
+                    }
+                    print(infos)
+                    hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time", "new_roleid"]
+                    update_table_to_all_cbg_url([infos], hope_update_list)
+
                 _prompt = f"\n当前链接：{current_url}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
                           f"高亮文字: {highlights}\n" \
                           f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
@@ -137,7 +162,7 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
                           f"============================\n" \
                           f"风姿度: {fengzidu}\n" \
-                          f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"\
+                          f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
                           f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
                           f"氪金: {datas['kejin_str']}"
                 break
@@ -147,6 +172,19 @@ def parse_yyscbg_url(game_ordersn=None):
                 _num += 1
                 _prompt = "代理出错，请重试"
     return _prompt
+
+
+def update_table_to_all_cbg_url(list_values, hope_update_list):
+    """更新入库"""
+    mysql_obj = YysMysql(cursor_type=True)
+    mysql_handle = mysql_obj.sql_open(mysql_config)
+    mysql_obj.insert_Or_update_mysql_record_many_new(
+        handle=mysql_handle,
+        db_table="yys_cbg.all_cbg_url",
+        list_values=list_values,
+        hope_update_list=hope_update_list
+    )
+    mysql_obj.sql_close(mysql_handle)
 
 
 def cal_time(n_seconds: int):

@@ -77,6 +77,20 @@ def check_platform(_type):
     return platform_type
 
 
+def check_sale_flag(status_desc):
+    if status_desc == "卖家取回":
+        flag = 1
+    elif status_desc in ["被下单", "上架中"]:
+        flag = 2
+    elif status_desc == "买家取走":
+        flag = 3
+    elif status_desc == "未上架":
+        flag = 4
+    else:
+        flag = 0
+    return flag
+
+
 def sort_2D_array_by_column(arr, column_index, _sort=True):
     """
     二维数组按某一列排序
