@@ -109,9 +109,15 @@ def parse_yyscbg_url(game_ordersn=None):
                 suit_speed = datas["suit_speed"]
                 create_time = datas["create_time"]
                 fengzidu = datas["fengzidu"]
+                yard_num = len(datas['yard_list'])
+                yard_prefix = f"（{yard_num}）" if yard_num else ''
                 yard_str = "、 ".join(datas["yard_list"])
                 dc_str = "、 ".join(datas["dc_list"])
+                dc_num = len(datas["dc_list"])
+                dc_prefix = f"（{dc_num}）" if dc_num else ''
                 shouban_str = "、 ".join(datas["shouban_list"])
+                shouban_num = len(datas["shouban_list"])
+                shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
                 sql = f"select * from yys_cbg.all_cbg_url where equip_name='{equip_name}' and server_name='{server_name}'" \
                       f" and status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}' " \
                       f"order by create_time desc"
@@ -131,8 +137,9 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
                           f"============================\n" \
                           f"风姿度: {fengzidu}\n" \
-                          f"庭院: {yard_str}\n典藏: {dc_str}\n"\
-                          f"手办框: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n氪金: {datas['kejin_str']}"
+                          f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"\
+                          f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
+                          f"氪金: {datas['kejin_str']}"
                 break
             else:
                 if _num >= 3:
