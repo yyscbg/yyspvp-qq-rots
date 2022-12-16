@@ -7,6 +7,7 @@
 @Detail: 藏宝阁数据解析
 """
 import os
+import copy
 import json
 import requests
 from pypinyin import pinyin, Style, lazy_pinyin
@@ -411,9 +412,22 @@ def get_speeds_all(data_info):
     return speeds_all
 
 
+def get_full_speed_number(speeds_all, standard_speed=15):
+    """获取满速个数"""
+    _sum = 0
+    for pos, value in speeds_all.items():
+        temp_standard = standard_speed
+        if pos == '2':
+            temp_standard = 57 + standard_speed
+        for _ in value:
+            if _["速度"] >= temp_standard:
+                _sum += 1
+    return _sum
+
+
 def remove_independent_speed(speeds_all, n):
     """移除独立速度"""
-    new_speeds_all = speeds_all.copy()
+    new_speeds_all = copy.deepcopy(speeds_all)
     for i in range(1, 7):
         for x in range(n):
             del new_speeds_all[str(i)][n - 1]
@@ -544,6 +558,9 @@ def get_speed_info(json_data, full_speed=150):
     data_info = parse.sort_pos(yuhun_json)
     # 速度御魂列表
     speeds_all = get_speeds_all(data_info)
+    # 满速个数
+    full_speed_num = get_full_speed_number(speeds_all, 15)
+    data.update({"full_speed_num": full_speed_num})
     # 二号位
     head_info = parse.find_yuhun_head(speeds_all, False)
     # 命中、抵抗
