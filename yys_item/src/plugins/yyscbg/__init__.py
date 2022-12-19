@@ -129,15 +129,13 @@ def parse_yyscbg_url(game_ordersn=None):
                 _history = select_sql(sql)
                 if _history:
                     history_price = _history[0]["price"]
-                    game_ordersn = _history[0]["game_ordersn"]
-                    server_id = game_ordersn.split('-')[1]
-                    history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
-                else:
-                    search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
-                    if not search_res:
-                        print("入库新纪录", search_res)
-                        break
-                    # 不存在入库
+                    old_game_ordersn = _history[0]["game_ordersn"]
+                    server_id = old_game_ordersn.split('-')[1]
+                    history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + old_game_ordersn
+
+                # 不存在入库
+                search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
+                if not search_res:
                     parse = CbgDataParser()
                     payload = parse.cbg_parse(infos, is_yuhun=False)
                     payload["status_des"] = check_sale_flag(payload["status_des"])
@@ -151,8 +149,9 @@ def parse_yyscbg_url(game_ordersn=None):
                         "price": payload["price"],
                         "update_time": get_now(),
                     }
-                    print(infos)
-                    hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time", "new_roleid"]
+                    print(f"入库成功：{game_ordersn}")
+                    hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time",
+                                        "new_roleid"]
                     update_table_to_all_cbg_url([infos], hope_update_list)
 
                 _prompt = f"\n当前链接：{current_url}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
@@ -231,19 +230,19 @@ def get_dmg_str(json_data):
         dmg_yuhun_list = pick_dmg_yuhun(
             data_yuhun_std,
             common_score=8,  # 普通8分
-            special_score=10   # 逢魔皮10分
+            special_score=10  # 逢魔皮10分
         )
         _str = ""
         for dmg_yuhun in dmg_yuhun_list:
             score_dmg = dmg_yuhun['score_dmg']  # 分数
             master_attr = dmg_yuhun['attrs']['main']['attr']  # 主属性
             _items = format_dmg_yuhun_str(dmg_yuhun['subs2'])
-            sgl2_str = f"固有{list(dmg_yuhun['sgl2'].keys())[0]}" if dmg_yuhun['kind'] in ['荒骷髅', '鬼灵歌伎', '土蜘蛛', '地震鲶', '蜃气楼'] else ""
+            sgl2_str = f"固有{list(dmg_yuhun['sgl2'].keys())[0]}" if dmg_yuhun['kind'] in ['荒骷髅', '鬼灵歌伎',
+                                                                                           '土蜘蛛', '地震鲶',
+                                                                                           '蜃气楼'] else ""
             # print(sgl2_str)
-            _str += f"\n【{dmg_yuhun['pos']}号位 {master_attr} {dmg_yuhun['kind']} {score_dmg}分 {sgl2_str}】\n"\
+            _str += f"\n【{dmg_yuhun['pos']}号位 {master_attr} {dmg_yuhun['kind']} {score_dmg}分 {sgl2_str}】\n" \
                     + "\n".join(_items)
     except Exception as e:
         print(e)
     return _str
-
-
