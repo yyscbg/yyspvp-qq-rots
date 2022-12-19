@@ -340,8 +340,7 @@ class CbgDataParser:
         # 崽战
         _zaizhan = list(
             map(
-                lambda x: f"{head_skin_count[x[0]] + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[
-                                                                                                          0] in head_skin_count else False,
+                lambda x: f"{str(head_skin_count[x[0]]) + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[0] in head_skin_count else False,
                 zaizhan_list
             )
         )
@@ -349,8 +348,7 @@ class CbgDataParser:
         # 氪金
         _kejin = list(
             map(
-                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[
-                                                                                            0] in head_skin_count else False,
+                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[0] in head_skin_count else False,
                 kejin_list
             )
         )
