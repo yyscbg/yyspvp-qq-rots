@@ -238,7 +238,10 @@ def get_dmg_str(json_data):
             score_dmg = dmg_yuhun['score_dmg']  # 分数
             master_attr = dmg_yuhun['attrs']['main']['attr']  # 主属性
             _items = format_dmg_yuhun_str(dmg_yuhun['subs2'])
-            _str += f"\n【{dmg_yuhun['pos']}号位 {master_attr} {dmg_yuhun['kind']} {score_dmg}分】\n" + "\n".join(_items)
+            sgl2_str = f"固有{list(dmg_yuhun['sgl2'].keys())[0]}" if dmg_yuhun['kind'] in ['荒骷髅', '鬼灵歌伎', '土蜘蛛', '地震鲶', '蜃气楼'] else ""
+            # print(sgl2_str)
+            _str += f"\n【{dmg_yuhun['pos']}号位 {master_attr} {dmg_yuhun['kind']} {score_dmg}分 {sgl2_str}】\n"\
+                    + "\n".join(_items)
     except Exception as e:
         print(e)
     return _str
