@@ -21,6 +21,7 @@ from utils.common_functions import select_sql, check_sale_flag
 from utils.yys_mysql import YysMysql
 from .yys_spider import get_equip_detail
 from .yys_parse import get_speed_info, CbgDataParser
+from .yys_cal_about import *
 
 config = get_driver().config.dict()
 
@@ -83,6 +84,7 @@ def parse_yyscbg_url(game_ordersn=None):
         _num = 1
         while True:
             infos = get_infos(game_ordersn)
+            dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 history_price = "暂无"
                 history_url = "暂无"
@@ -165,7 +167,9 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"风姿度: {fengzidu}\n" \
                           f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
                           f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
-                          f"氪金: {datas['kejin_str']}"
+                          f"氪金: {datas['kejin_str']}\n" \
+                          f"============================\n" \
+                          f"输出御魂：{dmg_str}"
                 break
             else:
                 if _num >= 3:
@@ -218,3 +222,25 @@ def get_suit_str(_array, is_detail=False):
                                                f"{get_pos_str(info['speed_list']) if info['suit_name'] == '除散件外独立招财' else ''}",
                                   _array)))
     return "\n".join(list(map(lambda info: f"{info['suit_name']}: {round(info['speed_sum'], 3)}", _array)))
+
+
+def get_dmg_str(json_data):
+    try:
+        data_yuhun_std = extract_data_cbg(json_data)
+        optimize_data_for_cal(data_yuhun_std)
+        dmg_yuhun_list = pick_dmg_yuhun(
+            data_yuhun_std,
+            common_score=8,  # 普通8分
+            special_score=10   # 逢魔皮10分
+        )
+        _str = ""
+        for dmg_yuhun in dmg_yuhun_list:
+            score_dmg = dmg_yuhun['score_dmg']  # 分数
+            master_attr = dmg_yuhun['attrs']['main']['attr']  # 主属性
+            _items = format_dmg_yuhun_str(dmg_yuhun['subs2'])
+            _str += f"\n【{dmg_yuhun['pos']}号位 {master_attr} {dmg_yuhun['kind']} {score_dmg}分】\n" + "\n".join(_items)
+    except Exception as e:
+        print(e)
+    return _str
+
+
