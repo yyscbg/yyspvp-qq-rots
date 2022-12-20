@@ -122,9 +122,9 @@ def parse_yyscbg_url(game_ordersn=None):
                 shouban_str = "、 ".join(datas["shouban_list"])
                 shouban_num = len(datas["shouban_list"])
                 shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
-                sql = f"select * from yys_cbg.all_cbg_url where equip_name='{equip_name}' and server_name='{server_name}'" \
-                      f" and status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}' " \
-                      f"order by create_time desc"
+                sql = f"""select * from yys_cbg.all_cbg_url where equip_name="{equip_name}" and server_name='{server_name}'""" \
+                      f""" and status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}' """ \
+                      f"""order by create_time desc"""
                 print(sql)
                 _history = select_sql(sql)
                 if _history:
