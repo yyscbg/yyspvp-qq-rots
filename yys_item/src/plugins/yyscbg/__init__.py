@@ -225,6 +225,7 @@ def get_suit_str(_array, is_detail=False):
 
 def get_dmg_str(json_data):
     try:
+        _str = ""
         data_yuhun_std = extract_data_cbg(json_data)
         optimize_data_for_cal(data_yuhun_std)
         dmg_yuhun_list = pick_dmg_yuhun(
@@ -232,7 +233,6 @@ def get_dmg_str(json_data):
             common_score=8,  # 普通8分
             special_score=10  # 逢魔皮10分
         )
-        _str = ""
         for dmg_yuhun in dmg_yuhun_list:
             score_dmg = dmg_yuhun['score_dmg']  # 分数
             master_attr = dmg_yuhun['attrs']['main']['attr']  # 主属性
