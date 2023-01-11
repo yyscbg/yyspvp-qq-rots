@@ -22,7 +22,7 @@ dc_skin = [
     "星坠之风", "福鲤霓裳", "锦羽金鹏", "胧月",
     "古桥水巷", "花引冥烛", "蝶步韶华", "响魂醉曲",
     "青莲蜕梦", "晴雨伴虹", "青鸾华影", "睦月神祈",
-    "紫藤花烬", "化烟", "神宫金社"
+    "紫藤花烬", "化烟", "神宫金社", "海原藏心", "海原藏心·臻藏"
 ]
 # 庭院皮肤
 ty_skin = [
@@ -337,6 +337,7 @@ class CbgDataParser:
         yzq = equip_desc["currency_900073"]  # 曜之契
         yzg_number = (len(yzg.get('effect', [])) + yzq) / 2  # 曜之阁期数
         head_skin_count = equip_desc["head_skin_count"]
+        ss_skin_count = [v[1] for key, value in equip_desc['skin'].items() for v in value if key == 'ss']  # 式神皮肤总数
         # 崽战
         _zaizhan = list(
             map(
@@ -397,6 +398,7 @@ class CbgDataParser:
             "dc_list": dc_list,
             "zaizhan_str": zaizhan_str,
             "kejin_str": kejin_str,
+            "ss_skin_count": len(ss_skin_count) if isinstance(ss_skin_count, list) else 0
         }
 
 
