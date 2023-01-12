@@ -6,7 +6,7 @@
 @FileName: __init__.py.py
 @Detail: 
 """
-
+import os
 import re
 from nonebot import on_command
 from nonebot import get_driver, logger
@@ -26,6 +26,9 @@ from .yys_cal_about import *
 config = get_driver().config.dict()
 
 yyscbg_accept_group = config.get('yyscbg_accept_group', [])
+# 当前目录路径
+current_dir = os.path.dirname(os.path.abspath(__file__))
+vip_json_file = os.path.join(current_dir, "vip_infos.json")
 
 
 async def group_checker(event: Event) -> bool:
@@ -48,20 +51,49 @@ yycbg_level = on_command("yyscbg_search", rule=group_checker, aliases={'藏宝�
 @yycbg_level.handle()
 async def server_code_search(bot: Bot, event: GroupMessageEvent):
     try:
-        game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
-        print(game_ordersn)
+        # 检验是否权限过期
+        user_id = event.get_user_id()
+        if not check_vip_infos(user_id):
+            _prompt = "无权限使用该功能，请找管理员开通或续费"
+        else:
+            game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+            try:
+                _prompt = parse_yyscbg_url(game_ordersn)
+            except Exception as e:
+                print(e)
+                _prompt = "代理出错，请重试"
     except Exception as e:
         print(e)
-        _prompt = "代理出错，请重试"
-    else:
-        _prompt = parse_yyscbg_url(game_ordersn)
-        await bot.send(event, message=_prompt, at_sender=True)
+        _prompt = "链接格式出错，请输入正确链接"
+
+    await bot.send(event, message=_prompt, at_sender=True)
+
+
+def check_vip_infos(user_id):
+    """判断vip权限"""
+    if not os.path.exists(vip_json_file):
+        print("不存在文件")
+        return False
+
+    with open(vip_json_file, "r") as fi:
+        yyscbg_vip_infos = json.loads(fi.read())
+
+    if len(yyscbg_vip_infos) > 0:
+        qq_list = list(map(lambda x: x["qq"], yyscbg_vip_infos))
+
+    if user_id in qq_list:
+        for vip_info in yyscbg_vip_infos:
+            if user_id == vip_info["qq"]:
+                if str(get_now()) <= vip_info["vip_expiry_time"]:
+                    return True
+    return False
 
 
 def get_infos(game_ordersn):
-    proxy_handle = ProxyTool()
+    # proxy_handle = ProxyTool()
     while True:
-        proxies = proxy_handle.get_proxy()
+        # proxies = proxy_handle.get_proxy()
+        proxies = None
         try:
             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
             if infos:
@@ -73,9 +105,10 @@ def get_infos(game_ordersn):
             else:
                 return False
         except Exception as e:
-            proxy_handle = ProxyTool()
-            proxies = proxy_handle.get_proxy()
-            print(f"{e}: 刷新代理: {proxies}")
+            print(e)
+            # proxy_handle = ProxyTool()
+            # proxies = proxy_handle.get_proxy()
+            # print(f"{e}: 刷新代理: {proxies}")
 
 
 def parse_yyscbg_url(game_ordersn=None):
