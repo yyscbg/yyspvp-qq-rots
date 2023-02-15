@@ -200,6 +200,10 @@ def parse_yyscbg_url(game_ordersn=None):
                           f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
                           f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
                           f"氪金: {datas['kejin_str']}\n" \
+                          f"500天未收录: {datas['sp_coin']}\n" \
+                          f"999天未收录: {datas['ssr_coin']}\n" \
+                          f"水墨皮兑换券: {datas['special_skin_str1']}\n" \
+                          f"限定皮兑换券: {datas['special_skin_str2']}\n" \
                           f"============================\n" \
                           f"输出御魂：{dmg_str}"
                 break

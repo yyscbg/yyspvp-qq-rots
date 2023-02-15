@@ -37,6 +37,17 @@ shouban_head = [
     "倦鸟眠花", "彼岸天光", "年年有余", "金羽焕夜", "星火漫天"
     "星陨之刻", "九尾幽梦", "无垢莲华", "蛇影裁决", "本味初心",
 ]
+# 限定皮肤卷
+cbg_special_skin = {
+    "currency_908702": "玉藻前·墨雨胧山兑换券",
+    "currency_908703": "空相面灵气·砚隐千面兑换券"
+}
+
+cbg_special_skin2 = {
+    "currency_412197": "狮子狂歌(限定)",
+    "currency_413003": "净魂狐焰(限定)",
+    "currency_413222": "炽火钢躯(限定)"
+}
 # 崽战
 zaizhan_list = [
     ("901224", "战·百鬼之主"), ("901154", "百鬼之主"),
@@ -315,6 +326,8 @@ class CbgDataParser:
         goyu = equip_desc.get('goyu', 0)  # 勾玉
         hunyu = equip_desc.get('hunyu', 0)  # 魂玉
         strength = equip_desc.get('strength', 0)  # 体力
+        ssr_coin = equip_desc.get('ssr_coin', 0)  # SSR未收录
+        sp_coin = equip_desc.get('sp_coin', 0)  # SP未收录
         gameble_card = equip_desc.get('gameble_card', 0)  # 蓝票
         equips_summary = equip_desc["equips_summary"]  # 御魂总数
         level_15 = equip_desc["level_15"]  # 15+御魂
@@ -363,7 +376,20 @@ class CbgDataParser:
         inventory = None
         if is_yuhun:
             inventory = equip_desc.get('inventory', None)  # 御魂
+        # 限定皮肤兑换券
+        special_skin_list = equip_desc.get('cbg_special_skin_list', [])
+        special_skin_str = ""
+        if special_skin_list:
+            special_skin = [f"{cbg_special_skin[k]}" for k, v in special_skin_list.items() if v != 0]
+            if special_skin:
+                special_skin_str = ", ".join(special_skin)
 
+        cbg_special_skin_list2 = equip_desc.get('cbg_special_skin_list_2', [])
+        special_skin_str2 = ""
+        if cbg_special_skin_list2:
+            special_skin2 = [f"{cbg_special_skin2[k]}" for k, v in cbg_special_skin_list2.items() if v > 1]
+            if special_skin2:
+                special_skin_str2 = ", ".join(special_skin2)
         # gouyu_card = equip_desc.get('gouyu_card', 0)                          # 太鼓
         # pvp_score = equip_desc["pvp_score"]                                   # 斗技分数
         # honor_score = equip_desc["honor_score"]                               # 荣誉
@@ -399,7 +425,11 @@ class CbgDataParser:
             "dc_list": dc_list,
             "zaizhan_str": zaizhan_str,
             "kejin_str": kejin_str,
-            "ss_skin_count": len(ss_skin_count) if isinstance(ss_skin_count, list) else 0
+            "ss_skin_count": len(ss_skin_count) if isinstance(ss_skin_count, list) else 0,
+            "sp_coin": sp_coin,
+            "ssr_coin": ssr_coin,
+            "special_skin_str1": special_skin_str,
+            "special_skin_str2": special_skin_str2,
         }
 
 
@@ -545,7 +575,7 @@ def cal_suit_speed(speeds_all, speed_sj_list, suit_name="招财猫"):
     return sp_list, sp_sum
 
 
-def get_speed_info(json_data, full_speed=150):
+def get_speed_info(json_data, full_speed=155):
     """
     合并成es索引结构数据
     :param json_data:
@@ -589,7 +619,7 @@ def get_speed_info(json_data, full_speed=150):
     ]
     # print(fast_speed_list)
     # 独立招财
-    # 默认筛选套装满速大于150
+    # 默认筛选套装满速大于155
     for suit_name in parse.yuhun_list:
         sp_list, sp_sum = cal_suit_speed(speeds_all, speeds_sj_list, suit_name)
         if sp_sum > full_speed:
