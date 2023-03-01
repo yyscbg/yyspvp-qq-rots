@@ -40,7 +40,8 @@ shouban_head = [
 # 限定皮肤卷
 cbg_special_skin = {
     "currency_908702": "玉藻前·墨雨胧山兑换券",
-    "currency_908703": "空相面灵气·砚隐千面兑换券"
+    "currency_908703": "空相面灵气·砚隐千面兑换券",
+    "currency_413564": ""
 }
 
 cbg_special_skin2 = {
@@ -378,18 +379,21 @@ class CbgDataParser:
             inventory = equip_desc.get('inventory', None)  # 御魂
         # 限定皮肤兑换券
         special_skin_list = equip_desc.get('cbg_special_skin_list', [])
-        special_skin_str = ""
-        if special_skin_list:
-            special_skin = [f"{cbg_special_skin[k]}" for k, v in special_skin_list.items() if v != 0]
-            if special_skin:
-                special_skin_str = ", ".join(special_skin)
-
         cbg_special_skin_list2 = equip_desc.get('cbg_special_skin_list_2', [])
         special_skin_str2 = ""
-        if cbg_special_skin_list2:
-            special_skin2 = [f"{cbg_special_skin2[k]}" for k, v in cbg_special_skin_list2.items() if v > 1]
-            if special_skin2:
-                special_skin_str2 = ", ".join(special_skin2)
+        special_skin_str = ""
+        try:
+            if special_skin_list:
+                special_skin = [f"{cbg_special_skin[k]}" for k, v in special_skin_list.items() if v != 0]
+                if special_skin:
+                    special_skin_str = ", ".join(special_skin)
+            if cbg_special_skin_list2:
+                special_skin2 = [f"{cbg_special_skin2[k]}" for k, v in cbg_special_skin_list2.items() if v > 1]
+                if special_skin2:
+                    special_skin_str2 = ", ".join(special_skin2)
+        except Exception as e:
+            print(e)
+
         # gouyu_card = equip_desc.get('gouyu_card', 0)                          # 太鼓
         # pvp_score = equip_desc["pvp_score"]                                   # 斗技分数
         # honor_score = equip_desc["honor_score"]                               # 荣誉
