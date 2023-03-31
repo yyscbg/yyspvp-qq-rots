@@ -13,7 +13,11 @@ import hashlib
 import numpy as np
 
 from utils.yys_mysql import YysMysql
-from configs.all_config import mysql_config
+
+try:
+    from configs.all_config import mysql_config
+except ImportError:
+    raise ImportError("数据库配置出错")
 
 
 def get_md5(_str):
@@ -22,7 +26,7 @@ def get_md5(_str):
     return m.hexdigest()
 
 
-def select_sql(sql, cursor_type=True):
+def select_sql(sql, cursor_type=True, mysql_config=mysql_config):
     """mysql查询"""
     try:
         my_sql = YysMysql(cursor_type=cursor_type)
@@ -35,7 +39,7 @@ def select_sql(sql, cursor_type=True):
         return False
 
 
-def update_sql(sql, cursor_type=True):
+def update_sql(sql, cursor_type=True, mysql_config=mysql_config):
     """mysql插入"""
     try:
         my_sql = YysMysql(cursor_type=cursor_type)
@@ -144,3 +148,124 @@ def get_shishen_name(shishen_json, _id):
             return shishen_name
     else:
         return None
+
+
+def insert_table_to_all_cbg_url(list_values, hope_update_list, mysql_config=mysql_config, table="yys_cbg.all_cbg_url"):
+    mysql_obj = YysMysql(cursor_type=True)
+    mysql_handle = mysql_obj.sql_open(mysql_config)
+    mysql_obj.insert_Or_update_mysql_record_many_new(
+        handle=mysql_handle,
+        db_table=table,
+        list_values=list_values,
+        hope_update_list=hope_update_list
+    )
+    mysql_obj.sql_close(mysql_handle)
+
+
+def predict_price(dts):
+    """预测价格"""
+    url = "http://www.peixx.org:19500/api/predict"
+    payload = json.dumps({
+        "feature": dts,
+        "game_name": "string"
+    })
+    headers = {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    if response.status_code == 200:
+        data = response.json().get('data')
+        return data[0].get('value', "") if len(data) != 0 else ""
+    return False
+
+
+def search_history(game_ordersn, create_time):
+    """查找历史"""
+    _sql = f"""
+            SELECT 
+                game_ordersn, equip_name, server_name, price, create_time, new_roleid
+            FROM
+                yys_cbg.all_cbg_url
+            WHERE
+                new_roleid IN (SELECT 
+                        new_roleid
+                    FROM
+                        yys_cbg.all_cbg_url
+                    WHERE
+                        game_ordersn='{game_ordersn}'    
+                )
+            AND
+                status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}'
+            ORDER BY create_time desc
+        """
+    return select_sql(_sql)
+
+
+def get_key_name(key_name):
+    """获取中文名称"""
+    key_dict = {
+        'collect_num': '收藏',
+        'full_speed_num': '满速个数',
+        'yuhun_buff': '御魂加成',
+        'price': '价格',
+        'goyu': '勾玉',
+        'status_des': '状态',
+        'highlights': '高亮文字',
+        'history_price': '历史价格',
+        'history_url': '历史链接',
+        'hunyu': '魂玉',
+        'fengzidu': '风姿度',
+        'strength': '体力',
+        'currency_900217': '金蛇皮',
+        "currency_900041": '痴卷',
+        'currency_900218': '逢魔皮',
+        'create_time': '上架时间',
+        'fair_show_end_time': '公示期',
+        'ss_skin_count': '式神皮肤总数',
+        'money': '金币',
+        'sign_days': '签到天数',
+        'level_15': '强化15+',
+        'gameble_card': '神秘符咒',
+        'lbscards_sum': '结界卡',
+        'equips_summary': '御魂总数',
+        'desc_sumup_short': '短描述',
+        'x_num': '联动碎片',
+        'yard_list': '庭院皮肤',
+        'shouban_list': '手办框',
+        'yaozhige': '曜之契',
+        'ar_gamble_card': '现实符咒',
+        'game_ordersn': '订单编号',
+        'special_skin_str2': '手办限定皮卷',
+        'kejin_str': '氪金',
+        'zaizhan_str': '崽战',
+        'sp_coin': '999未收录',
+        'ssr_coin': '500未收录'
+    }
+    return key_dict.get(key_name, '')
+
+
+def get_yyscbg_url(game_ordersn):
+    server_id, _, _ = game_ordersn.partition('-')
+    return f"https://yys.cbg.163.com/cgi/mweb/equip/{server_id}/{game_ordersn}"
+
+
+def format_number(num):
+    show_str = ""
+    if num >= 10000:
+        show_str = f"{(num / 10000):.2f}万"
+    else:
+        show_str = f"{num}" if num is not None else ""
+    return show_str
+
+
+def format_yuhun_buff(values):
+    """格式化御魂 buff"""
+    yuhun_buff = values / 3600
+    show_str = ""
+    if yuhun_buff >= 24:
+        show_str = f"{(yuhun_buff / 24):.2f}天"
+    else:
+        show_str = f"{yuhun_buff:.2f}时"
+    return show_str

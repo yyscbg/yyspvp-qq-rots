@@ -139,16 +139,9 @@ class CbgDataParser:
         """
         result = {"1": [], "2": [], "3": [], "4": [], "5": [], "6": []}
         for i in dts:
-            if i["位置"] == "1":
-                result["1"].append(i)
-            elif i["位置"] == "2":
-                result["2"].append(i)
-            elif i["位置"] == '3':
-                result["3"].append(i)
-            elif i["位置"] == "4":
-                result["4"].append(i)
-            elif i["位置"] == "5":
-                result["5"].append(i)
+            pos = i["位置"]
+            if pos in result:
+                result[pos].append(i)
             else:
                 result["6"].append(i)
         return result
@@ -281,17 +274,15 @@ class CbgDataParser:
         return mitama_attrs_all
 
     @staticmethod
-    def cal_time(n_seconds: int):
+    def cal_time(n_seconds: int) -> str:
         """
         计算加成时间
         :param n_seconds: 秒
         :return:
         """
         hour = round(n_seconds / 3600, 2)
-        if hour >= 24:
-            return str(round(hour / 24, 1)) + "d"
-        else:
-            return str(hour) + "h"
+        time_str = f"{round(hour / 24, 1)}d" if hour >= 24 else f"{hour}h"
+        return time_str
 
     @staticmethod
     def cbg_parse(datas, is_yuhun=True):
@@ -304,6 +295,7 @@ class CbgDataParser:
 
         # seller_roleid = equip["seller_roleid"]
         seller_roleid = ""
+        game_ordersn = equip["game_ordersn"]
         status_desc = equip["status_desc"]
         equip_desc = equip["equip_desc"]
         fair_show_end_time = equip["fair_show_end_time"]  # 公示期
@@ -409,6 +401,7 @@ class CbgDataParser:
         # currency_900007 = equip_desc.get('currency_900007', 0)                # 百鬼夜行门票
 
         return {
+            "game_ordersn": game_ordersn,
             "new_roleid": new_roleid, "seller_roleid": seller_roleid,
             "equip_name": seller_name, "server_name": server_name,
             "create_time": create_time, "status_des": status_desc,
@@ -666,33 +659,3 @@ if __name__ == '__main__':
     del equip_desc["prefab_team"]  # 预设阵容
 
     print(equip_desc)
-    # 崽战
-    zaizhan_list = [
-        ("901224", "战·百鬼之主"), ("901154", "百鬼之主"),
-        ("901225", "战·大阴阳师"), ("901153", "大阴阳师"),
-        ("901152", "京都名士")
-    ]
-    # 氪金
-    kejin_list = [
-        ("901130", "京都之主"), ("901240", "鲤跃金松")
-    ]
-
-    # head_skin_count = equip_desc["head_skin"]
-    # skin = equip_desc["skin"]
-    # print(head_skin_count)
-    # print(skin["guard"])
-    # parse = CbgDataParser()
-    # data = parse.cbg_parse(json_data)
-    # print(data["yaozhige"])
-    # yuhun_json = parse.init_yuhun(data["inventory"])
-    # # 御魂分组1-6
-    # data_info = parse.sort_pos(yuhun_json)
-    # # print(data_info)
-    # datas = get_speed_info(json_data)
-    # print(datas)
-    # info = get_speed_info(json_data, 0)
-    # print(info)
-    # print(len(info["suit_speed"]))
-    # parse = CbgDataParser()
-    # data = parse.cbg_parse(json_data, is_yuhun=False)
-    # print(data)

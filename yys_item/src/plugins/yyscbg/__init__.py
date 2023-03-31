@@ -12,20 +12,20 @@ from nonebot import on_command
 from nonebot import get_driver, logger
 from nonebot.matcher import Matcher
 from nonebot.adapters import Message, Event
-from nonebot.adapters.onebot.v11 import MessageSegment, GroupMessageEvent, Bot
-
+from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageSegment
 from configs.all_config import mysql_config
-from utils.yys_proxy import ProxyTool
 from utils.yys_time import get_now
-from utils.common_functions import select_sql, check_sale_flag
+from utils.common_functions import select_sql, check_sale_flag, search_history, get_yyscbg_url
 from utils.yys_mysql import YysMysql
-from .yys_spider import get_equip_detail
+from .yys_spider import get_equip_detail, get_infos_by_kdl
 from .yys_parse import get_speed_info, CbgDataParser
 from .yys_cal_about import *
+from .lotter_system import diffrent_data, get_infos_data
 
 config = get_driver().config.dict()
 
 yyscbg_accept_group = config.get('yyscbg_accept_group', [])
+yyscbg_accept_vip_group = config.get('yyscbg_accept_vip_group', [])
 # 当前目录路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 vip_json_file = os.path.join(current_dir, "vip_infos.json")
@@ -34,81 +34,119 @@ vip_json_file = os.path.join(current_dir, "vip_infos.json")
 async def group_checker(event: Event) -> bool:
     """自定义群组规则"""
     # 匹配群组id
-    group_id = ""
-    flag = False
-    # user_id = event.get_user_id()
-    _group = re.findall("group_(\\d+)_", event.get_session_id())
-    if _group:
-        group_id = _group[0]
-    if group_id in yyscbg_accept_group:
-        flag = True
-    return flag
+    group_id = re.findall("group_(\\d+)_", event.get_session_id())
+    if group_id and group_id[0] in yyscbg_accept_group:
+        return True
+    else:
+        return False
+
+
+async def group_checker_vip(event: Event) -> bool:
+    """自定义群组规则"""
+    # 匹配群组id
+    group_id = re.findall("group_(\\d+)_", event.get_session_id())
+    if group_id and (group_id[0] in yyscbg_accept_vip_group or group_id[0] in yyscbg_accept_vip_group):
+        return True
+    else:
+        return False
 
 
 yycbg_level = on_command("yyscbg_search", rule=group_checker, aliases={'藏宝阁', 'cbg', 'Cbg', "CBG"}, priority=0)
+compare_data_level = on_command("yyscbg_compare", rule=group_checker_vip, aliases={'对比', 'compare'}, priority=0)
 
 
 @yycbg_level.handle()
-async def server_code_search(bot: Bot, event: GroupMessageEvent):
+async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
     try:
         # 检验是否权限过期
         user_id = event.get_user_id()
         if not check_vip_infos(user_id):
-            _prompt = "无权限使用该功能，请找管理员开通或续费"
+            _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
             game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
             try:
+                print(game_ordersn)
                 _prompt = parse_yyscbg_url(game_ordersn)
             except Exception as e:
+                _prompt = MessageSegment.text("代理出错，请重试")
                 print(e)
-                _prompt = "代理出错，请重试"
     except Exception as e:
         print(e)
-        _prompt = "链接格式出错，请输入正确链接"
+        _prompt = MessageSegment.text("链接格式出错，请输入正确链接")
+    await bot.send(event, message=_prompt, at_sender=True)
 
+
+@compare_data_level.handle()
+async def search_campare_data(bot: Bot, event: GroupMessageEvent):
+    try:
+        # 检验是否权限过期
+        user_id = event.get_user_id()
+        if not check_vip_infos(user_id):
+            _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
+        else:
+            _prompt = "暂无历史记录"
+            game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+            try:
+                infos1 = get_infos(game_ordersn)
+                json1 = get_infos_data(infos1)
+                create_time = json1["create_time"]
+                del json1['highlights']
+                del json1['desc_sumup_short']
+                del json1['game_ordersn']
+                history_data = search_history(game_ordersn, create_time)
+                if history_data:
+                    history_data = history_data[0]
+                    infos2 = get_infos(history_data["game_ordersn"])
+                    json2 = get_infos_data(infos2)
+                    del json2['highlights']
+                    del json2['desc_sumup_short']
+                    del json2['game_ordersn']
+                    diff_list = diffrent_data(json2, json1)
+                    diff_list.insert(0, "\n")
+                    current_url = get_yyscbg_url(game_ordersn)
+                    diff_list.append(f"当前价格: {int(json1['price'])}")
+                    diff_list.append(f"当前链接: {current_url}")
+                    history_url = get_yyscbg_url(history_data["game_ordersn"])
+                    diff_list.append(f"历史价格: {history_data['price']}")
+                    diff_list.append(f"历史链接: {history_url}")
+                    _prompt = "\n".join(diff_list)
+            except Exception as e:
+                _prompt = MessageSegment.text("代理出错，请重试")
+                print(e)
+    except Exception as e:
+        print(e)
+        _prompt = MessageSegment.text("链接格式出错，请输入正确链接")
     await bot.send(event, message=_prompt, at_sender=True)
 
 
 def check_vip_infos(user_id):
     """判断vip权限"""
     if not os.path.exists(vip_json_file):
-        print("不存在文件")
+        print("不存在文件!")
         return False
 
     with open(vip_json_file, "r") as fi:
-        yyscbg_vip_infos = json.loads(fi.read())
+        yyscbg_vip_infos = json.load(fi)
 
-    if len(yyscbg_vip_infos) > 0:
-        qq_list = list(map(lambda x: x["qq"], yyscbg_vip_infos))
+    qq_list = [vip_info["qq"] for vip_info in yyscbg_vip_infos]
+    vip_expiry_times = {vip_info["qq"]: vip_info["vip_expiry_time"] for vip_info in yyscbg_vip_infos}
 
-    if user_id in qq_list:
-        for vip_info in yyscbg_vip_infos:
-            if user_id == vip_info["qq"]:
-                if str(get_now()) <= vip_info["vip_expiry_time"]:
-                    return True
-    return False
+    if user_id in qq_list and str(get_now()) <= vip_expiry_times[user_id]:
+        return True
+    else:
+        return False
 
 
 def get_infos(game_ordersn):
-    # proxy_handle = ProxyTool()
     while True:
-        # proxies = proxy_handle.get_proxy()
         proxies = None
         try:
             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
-            if infos:
-                """{'msg': '为了您的账号安全，请登录之后继续访问！', 'status': 2, 'status_code': 'SESSION_TIMEOUT'}"""
-                if infos.get('status_code') == "SESSION_TIMEOUT" or infos.get('status') == 2:
-                    continue
-
+            if infos and infos.get('status_code') not in ["SESSION_TIMEOUT"] and infos.get('status') != 2:
                 return infos
-            else:
-                return False
         except Exception as e:
             print(e)
-            # proxy_handle = ProxyTool()
-            # proxies = proxy_handle.get_proxy()
-            # print(f"{e}: 刷新代理: {proxies}")
+        return False
 
 
 def parse_yyscbg_url(game_ordersn=None):
@@ -121,8 +159,7 @@ def parse_yyscbg_url(game_ordersn=None):
             if infos and not isinstance(infos, str):
                 history_price = "暂无"
                 history_url = "暂无"
-                server_id = game_ordersn.split('-')[1]
-                current_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
+                current_url = get_yyscbg_url(game_ordersn)
                 datas = get_speed_info(infos)
                 if not datas:
                     if _num >= 3:
@@ -163,8 +200,7 @@ def parse_yyscbg_url(game_ordersn=None):
                 if _history:
                     history_price = _history[0]["price"]
                     old_game_ordersn = _history[0]["game_ordersn"]
-                    server_id = old_game_ordersn.split('-')[1]
-                    history_url = "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + old_game_ordersn
+                    history_url = get_yyscbg_url(old_game_ordersn)
 
                 # 不存在入库
                 search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
@@ -235,10 +271,8 @@ def cal_time(n_seconds: int):
     :return:
     """
     hour = round(n_seconds / 3600, 2)
-    if hour >= 24:
-        return str(round(hour / 24, 1)) + "天"
-    else:
-        return str(hour) + "时"
+    time_str = f"{round(hour / 24, 1)}天" if hour >= 24 else f"{hour}时"
+    return time_str
 
 
 def get_str(_array):
