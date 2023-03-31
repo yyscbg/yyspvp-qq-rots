@@ -247,8 +247,8 @@ def get_key_name(key_name):
 
 
 def get_yyscbg_url(game_ordersn):
-    server_id, _, _ = game_ordersn.partition('-')
-    return f"https://yys.cbg.163.com/cgi/mweb/equip/{server_id}/{game_ordersn}"
+    server_id = game_ordersn.split('-')[1]
+    return "https://yys.cbg.163.com/cgi/mweb/equip/" + server_id + "/" + game_ordersn
 
 
 def format_number(num):
