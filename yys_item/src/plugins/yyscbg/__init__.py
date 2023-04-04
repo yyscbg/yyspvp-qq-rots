@@ -90,14 +90,14 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
             try:
                 infos1 = get_infos(game_ordersn)
                 json1 = get_infos_data(infos1)
-                create_time = json1["create_time"]
+                history_url, history_price = find_history_infos(json1)
                 del json1['highlights']
                 del json1['desc_sumup_short']
                 del json1['game_ordersn']
-                history_data = search_history(game_ordersn, create_time)
-                if history_data:
-                    history_data = history_data[0]
-                    infos2 = get_infos(history_data["game_ordersn"])
+                if isinstance(history_price, int):
+                    history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
+                    print(history_game_ordersn)
+                    infos2 = get_infos(history_game_ordersn)
                     json2 = get_infos_data(infos2)
                     del json2['highlights']
                     del json2['desc_sumup_short']
@@ -107,8 +107,7 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
                     current_url = get_yyscbg_url(game_ordersn)
                     diff_list.append(f"当前价格: {int(json1['price'])}")
                     diff_list.append(f"当前链接: {current_url}")
-                    history_url = get_yyscbg_url(history_data["game_ordersn"])
-                    diff_list.append(f"历史价格: {history_data['price']}")
+                    diff_list.append(f"历史价格: {history_price}")
                     diff_list.append(f"历史链接: {history_url}")
                     _prompt = "\n".join(diff_list)
             except Exception as e:
