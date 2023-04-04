@@ -18,7 +18,7 @@ from utils.yys_time import get_now
 from utils.common_functions import select_sql, check_sale_flag, search_history, get_yyscbg_url
 from utils.yys_mysql import YysMysql
 from .yys_spider import get_equip_detail, get_infos_by_kdl
-from .yys_parse import get_speed_info, CbgDataParser
+from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
 from .yys_cal_about import *
 from .lotter_system import diffrent_data, get_infos_data
 
@@ -86,6 +86,7 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
         else:
             _prompt = "暂无历史记录"
             game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+            print(game_ordersn)
             try:
                 infos1 = get_infos(game_ordersn)
                 json1 = get_infos_data(infos1)
@@ -149,6 +150,63 @@ def get_infos(game_ordersn):
         return False
 
 
+def find_history_infos(infos):
+    equip_name = infos["equip_name"]
+    server_name = infos["server_name"]
+    create_time = infos["create_time"]
+    game_ordersn = infos["game_ordersn"]
+
+    # 方法一
+    sql = f"""  
+        select *  
+        from yys_cbg.all_cbg_url  
+        where equip_name="{equip_name}"  
+            and server_name='{server_name}'  
+            and status_des=3  
+            and game_ordersn!='{game_ordersn}'  
+            and create_time<='{create_time}'  
+            order by create_time desc  
+    """
+    print(sql)
+    _history = select_sql(sql)
+    if _history:
+        history_url = get_yyscbg_url(_history[0]["game_ordersn"])
+        history_price = _history[0]["price"]
+        return history_url, history_price
+    # 方法二
+    parse = CbgDataParser()
+    yuhun_json = parse.init_yuhun(infos["inventory"])
+    data_info = parse.sort_pos(yuhun_json)
+    uuid_infos = find_yuhun_uuid(data_info)
+    uuid_json = choose_best_uuid(uuid_infos)
+
+    my_sql = YysMysql(cursor_type=True)
+    mysql_handle = my_sql.sql_open(mysql_config)
+    for _uuid in uuid_json[:10]:
+        sql = f"""  
+            SELECT *  
+            FROM yys_cbg.all_cbg_url  
+            WHERE JSON_CONTAINS(uuid_json, '"{_uuid}"')  
+                and status_des=3  
+                and game_ordersn!='{game_ordersn}'  
+                and create_time<='{create_time}'  
+                order by create_time desc
+        """
+        print(sql)
+        _history = my_sql.select_mysql_record(mysql_handle, sql)
+        if _history:
+            history_url = get_yyscbg_url(_history[0]["game_ordersn"])
+            history_price = _history[0]["price"]
+            break
+    else:
+        # 如果未找到历史信息，则返回 None
+        history_url = "暂无"
+        history_price = "暂无"
+
+    mysql_handle.close()
+    return history_url, history_price
+
+
 def parse_yyscbg_url(game_ordersn=None):
     _prompt = "链接格式错误~"
     if game_ordersn:
@@ -157,8 +215,6 @@ def parse_yyscbg_url(game_ordersn=None):
             infos = get_infos(game_ordersn)
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
-                history_price = "暂无"
-                history_url = "暂无"
                 current_url = get_yyscbg_url(game_ordersn)
                 datas = get_speed_info(infos)
                 if not datas:
@@ -167,6 +223,7 @@ def parse_yyscbg_url(game_ordersn=None):
                     _num += 1
                     _prompt = "代理出错，请重试"
                     continue
+                datas['game_ordersn'] = game_ordersn
                 equip_name = datas["equip_name"]
                 server_name = datas["server_name"]
                 status_des = datas["status_des"]
@@ -181,7 +238,6 @@ def parse_yyscbg_url(game_ordersn=None):
                 mz_info = speed_infos["mz_info"]
                 dk_info = speed_infos["dk_info"]
                 suit_speed = datas["suit_speed"]
-                create_time = datas["create_time"]
                 fengzidu = datas["fengzidu"]
                 yard_num = len(datas['yard_list'])
                 yard_prefix = f"（{yard_num}）" if yard_num else ''
@@ -192,16 +248,9 @@ def parse_yyscbg_url(game_ordersn=None):
                 shouban_str = "、 ".join(datas["shouban_list"])
                 shouban_num = len(datas["shouban_list"])
                 shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
-                sql = f"""select * from yys_cbg.all_cbg_url where equip_name="{equip_name}" and server_name='{server_name}'""" \
-                      f""" and status_des=3 and game_ordersn!='{game_ordersn}' and create_time<='{create_time}' """ \
-                      f"""order by create_time desc"""
-                print(sql)
-                _history = select_sql(sql)
-                if _history:
-                    history_price = _history[0]["price"]
-                    old_game_ordersn = _history[0]["game_ordersn"]
-                    history_url = get_yyscbg_url(old_game_ordersn)
-
+                # 查找历史
+                history_url, history_price = find_history_infos(datas)
+                print(history_url, history_price)
                 # 不存在入库
                 search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
                 if not search_res:

@@ -267,6 +267,7 @@ class CbgDataParser:
                         mitama_attrs[prop] = value
                     else:
                         mitama_attrs[prop] += value
+            mitama_attrs['uuid'] = mitama_info['uuid']
             mitama_attrs["位置"] = mitama_pos
             mitama_attrs["类型"] = mitama_name
             mitama_attrs_all.append(mitama_attrs)
@@ -289,7 +290,6 @@ class CbgDataParser:
         """藏宝阁数据解析"""
         equip = datas.get('equip', None)
         if not equip:
-            print(datas)
             print("no equip")
             return None
 
@@ -348,7 +348,8 @@ class CbgDataParser:
         # 崽战
         _zaizhan = list(
             map(
-                lambda x: f"{str(head_skin_count[x[0]]) + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[0] in head_skin_count else False,
+                lambda x: f"{str(head_skin_count[x[0]]) + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[
+                                                                                                               0] in head_skin_count else False,
                 zaizhan_list
             )
         )
@@ -356,7 +357,8 @@ class CbgDataParser:
         # 氪金
         _kejin = list(
             map(
-                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[0] in head_skin_count else False,
+                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[
+                                                                                            0] in head_skin_count else False,
                 kejin_list
             )
         )
@@ -627,7 +629,6 @@ def get_speed_info(json_data, full_speed=155):
                 "speed_list": list(filter_chinese(sp_list)),
                 # "speed_list": sp_list,
             })
-    del data["inventory"]
     data.update({
         "speed_infos": {
             "head_info": head_info,
@@ -637,6 +638,56 @@ def get_speed_info(json_data, full_speed=155):
         "suit_speed": sorted(fast_speed_list, key=lambda e: e["speed_sum"], reverse=True)
     })
     return data
+
+
+def find_yuhun_uuid(dts):
+    """查找御魂246号uuid"""
+    uuid_list = {}
+    for k, values in dts.items():
+        if k == '2':
+            uuid_list["2"] = []
+            for item in values:
+                if '速度' in item.keys() and item['速度'] >= (57 + 15):
+                    uuid_list["2"].append(item)
+        elif k == '4':
+            uuid_list["4"] = []
+            for item in values:
+                if '速度' in item.keys() and item['速度'] > 15:
+                    if '效果抵抗' in item.keys() and item['效果抵抗'] >= 55:
+                        uuid_list["4"].append(item)
+                    if '效果命中' in item.keys() and item['效果命中'] >= 55:
+                        uuid_list["4"].append(item)
+        elif k == '6':
+            uuid_list["6"] = []
+            for item in values:
+                if '暴击伤害' in item.keys() and item['暴击伤害'] >= 89:
+                    uuid_list["6"].append(item)
+
+    uuid_list['2'] = list_dict_order_by_key(uuid_list['2'], "速度", True)
+    uuid_list['4'] = list_dict_order_by_key(uuid_list['4'], "速度", True)
+    uuid_list['6'] = list_dict_order_by_key(uuid_list['6'], "暴击伤害", True)
+    return uuid_list
+
+
+def choose_best_uuid(infos: dict):
+    """
+    选择最优uuid：先找头尾满速，然后找6号为爆伤
+    :return:
+    """
+    uuid_json = []
+    pos_2 = infos.get('2', [])
+    pos_4 = infos.get('4', [])
+    pos_6 = infos.get('6', [])
+    if pos_2:
+        for pos in pos_2:
+            uuid_json.append(pos['uuid'])
+    if pos_4:
+        for pos in pos_4:
+            uuid_json.append(pos['uuid'])
+    if pos_6:
+        for pos in pos_6:
+            uuid_json.append(pos['uuid'])
+    return uuid_json
 
 
 if __name__ == '__main__':
