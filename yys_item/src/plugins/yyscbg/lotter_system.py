@@ -118,7 +118,6 @@ def get_infos_data(infos):
     try:
         data = parse.cbg_parse(infos)
         data["price"] = int(data["price"])
-
     except Exception as e:
         print(e)
         return
@@ -205,7 +204,6 @@ def get_infos_data(infos):
     # data.update({
     #     "dmg_yuhun_6_num": dmg_yuhun_6_num
     # })
-    del data["inventory"]
     return data
 
 

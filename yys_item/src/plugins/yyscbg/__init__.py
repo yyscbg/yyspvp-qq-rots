@@ -94,6 +94,7 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
                 del json1['highlights']
                 del json1['desc_sumup_short']
                 del json1['game_ordersn']
+                del json1['inventory']
                 if isinstance(history_price, int):
                     history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
                     print(history_game_ordersn)
@@ -102,6 +103,7 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
                     del json2['highlights']
                     del json2['desc_sumup_short']
                     del json2['game_ordersn']
+                    del json2['inventory']
                     diff_list = diffrent_data(json2, json1)
                     diff_list.insert(0, "\n")
                     current_url = get_yyscbg_url(game_ordersn)
@@ -116,6 +118,7 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
     except Exception as e:
         print(e)
         _prompt = MessageSegment.text("链接格式出错，请输入正确链接")
+    print(_prompt)
     await bot.send(event, message=_prompt, at_sender=True)
 
 
