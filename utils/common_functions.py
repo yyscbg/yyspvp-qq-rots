@@ -241,7 +241,8 @@ def get_key_name(key_name):
         'kejin_str': '氪金',
         'zaizhan_str': '崽战',
         'sp_coin': '999未收录',
-        'ssr_coin': '500未收录'
+        'ssr_coin': '500未收录',
+        "platform_type": '系统',
     }
     return key_dict.get(key_name, '')
 
