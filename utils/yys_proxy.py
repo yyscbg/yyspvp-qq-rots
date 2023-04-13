@@ -6,11 +6,11 @@
 @FileName: yys_proxy.py
 @Detail: 代理模块
 """
-import base64
-import json
 import random
 import requests
 from tenacity import retry, stop_after_attempt, wait_fixed
+from requests.exceptions import RequestException
+from urllib3.util.retry import Retry
 
 
 class KDLProxy:
@@ -102,42 +102,55 @@ class KDLProxy:
 
 
 class ProxyTool:
-    def __init__(self, proxy_url=None, http_prefix=None):
-        self.http_prefix = http_prefix if http_prefix else None
-        self.proxy_url = proxy_url if proxy_url else None
+    def __init__(self, proxy_url: str = None, http_prefix: str = None) -> None:
+        self.http_prefix = http_prefix or ''
+        self.proxy_url = proxy_url or ''
         if not self.http_prefix or not self.proxy_url:
-            raise ValueError("代理配置出错")
+            raise ValueError('代理配置出错')
         self.proxy_list = []
 
-    @retry(stop=stop_after_attempt(3), wait=wait_fixed(5))
-    def get_proxies(self):
+    def _get_proxies_from_server(self) -> None:
         try:
-            if self.proxy_url is None:
-                raise ValueError('proxy_url must be set')
-            rs_json = requests.get(self.proxy_url, timeout=5).json()
+            response = requests.get(self.proxy_url, timeout=3)
+            response.raise_for_status()
+            rs_json = response.json()
             if rs_json:
-                self.proxy_list = rs_json["data"][1]["proxy"]
-        except Exception as e:
-            raise ValueError(f"代理商出错：{e}")
+                self.proxy_list = rs_json['data'][1]['proxy']
+        except (RequestException, ValueError) as e:
+            raise ValueError(f'代理商出错：{e}')
 
-    def get_proxy(self, _num=5):
+    def get_proxies(self) -> None:
+        retry_strategy = Retry(
+            total=10,
+            backoff_factor=2,
+            status_forcelist=[429, 500, 502, 503, 504],
+            method_whitelist=["HEAD", "GET", "OPTIONS"]
+        )
+        adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
+        with requests.Session() as session:
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
+            self._get_proxies_from_server()
+
+    def get_proxy(self, num_retries: int = 5):
         while True:
             try:
-                if len(self.proxy_list) > 0:
-                    ip = self.proxy_list[random.randint(0, len(self.proxy_list) - 1)]
+                if not self.proxy_list:
+                    self.get_proxies()
+                if self.proxy_list:
+                    ip = random.choice(self.proxy_list)
                     proxies = {
-                        "http": "{}{}".format(self.http_prefix, ip),
-                        "https": "{}{}".format(self.http_prefix, ip)
+                        'http': f'{self.http_prefix}{ip}',
+                        'https': f'{self.http_prefix}{ip}'
                     }
                     return proxies
-                self.get_proxies()
+                else:
+                    raise ValueError('代理列表为空')
             except Exception as e:
-                if _num == 0:
+                if num_retries == 0:
                     return False
-                # 刷新代理
-                self.get_proxies()
-                print(f"重试获取代理：{e}")
-                _num -= 1
+                print(f'重试获取代理：{e}')
+                num_retries -= 1
 
 
 if __name__ == '__main__':

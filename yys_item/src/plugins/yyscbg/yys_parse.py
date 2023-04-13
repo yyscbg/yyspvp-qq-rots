@@ -401,7 +401,15 @@ class CbgDataParser:
         # currency_906058 = equip_desc.get('currency_906058', 0)                # 皮肤卷
         # currency_906058 = equip_desc.get('currency_906058', 0)                # sp皮肤卷
         # currency_900007 = equip_desc.get('currency_900007', 0)                # 百鬼夜行门票
-
+        hero_history = equip_desc["hero_history"]
+        sp_dict = hero_history.get('sp', {})
+        ssr_dict = hero_history.get('ssr', {})
+        sp_flag = 1
+        ssr_flag = 1
+        if sp_dict.get('got', 0) != sp_dict.get('all', 1):
+            sp_flag = -1
+        if ssr_dict.get('got', 0) != ssr_dict.get('all', 1):
+            ssr_flag = -1
         return {
             "game_ordersn": game_ordersn,
             "new_roleid": new_roleid, "seller_roleid": seller_roleid,
@@ -429,6 +437,8 @@ class CbgDataParser:
             "ssr_coin": ssr_coin,
             "special_skin_str1": special_skin_str,
             "special_skin_str2": special_skin_str2,
+            "ssr_flag": ssr_flag,
+            "sp_flag": sp_flag
         }
 
 

@@ -8,19 +8,22 @@
 """
 import os
 import re
-from nonebot import on_command
-from nonebot import get_driver, logger
+import concurrent.futures
+from nonebot import get_driver, logger, get_bot, on_command, require
 from nonebot.matcher import Matcher
 from nonebot.adapters import Message, Event
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageSegment
-from configs.all_config import mysql_config
-from utils.yys_time import get_now
+from configs.all_config import mysql_config, proxy_url, http_prefix
+from utils.yys_time import get_now, get_before_Or_after_few_times
+from utils.yys_proxy import ProxyTool
 from utils.common_functions import select_sql, check_sale_flag, search_history, get_yyscbg_url
 from utils.yys_mysql import YysMysql
 from .yys_spider import get_equip_detail, get_infos_by_kdl
 from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
 from .yys_cal_about import *
 from .lotter_system import diffrent_data, get_infos_data
+
+scheduler = require("nonebot_plugin_apscheduler").scheduler
 
 config = get_driver().config.dict()
 
@@ -29,6 +32,7 @@ yyscbg_accept_vip_group = config.get('yyscbg_accept_vip_group', [])
 # 当前目录路径
 current_dir = os.path.dirname(os.path.abspath(__file__))
 vip_json_file = os.path.join(current_dir, "vip_infos.json")
+groups = config.get('yyscbg_push_group', [])
 
 
 async def group_checker(event: Event) -> bool:
@@ -55,6 +59,46 @@ yycbg_level = on_command("yyscbg_search", rule=group_checker, aliases={'藏宝�
 compare_data_level = on_command("yyscbg_compare", rule=group_checker_vip, aliases={'对比', 'compare'}, priority=0)
 
 
+async def send_notification(bot, group_id, message):
+    message += f"\n时间校准:{get_now()}"
+    await bot.send_group_msg(group_id=group_id, message=message)
+
+
+async def get_datas():
+    """获取半小时内的数据"""
+    before_time_str = get_before_Or_after_few_times(minutes=-15)
+    after_time_str = get_before_Or_after_few_times(minutes=1)
+    my_sql = YysMysql(cursor_type=True)
+    mysql_handle = my_sql.sql_open(mysql_config)
+    sql = f"SELECT * FROM yys_cbg.all_cbg_url where create_time BETWEEN '{before_time_str}' AND '{after_time_str}'"
+    print(sql)
+    datas = my_sql.select_mysql_record(mysql_handle, sql)
+    my_sql.sql_close(mysql_handle)
+    # 使用多线程并行处理
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(handle_data, data) for data in datas]
+        last_result = [f.result() for f in concurrent.futures.as_completed(futures) if f.result()]
+    return last_result
+
+
+def handle_data(data):
+    # message = get_compara_infos(data['game_ordersn'], True, True)
+    message = parse_yyscbg_url(data['game_ordersn'], True)
+    if message == "暂无历史记录":
+        return False
+    return message
+
+
+@scheduler.scheduled_job('interval', minutes=5)
+async def yyscbg_notice():
+    # 5分钟通知一次
+    bot = get_bot()
+    infos = await get_datas()
+    for group_id in groups:
+        for msg in infos:
+            await send_notification(bot, group_id, msg)
+
+
 @yycbg_level.handle()
 async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
     try:
@@ -76,6 +120,48 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
     await bot.send(event, message=_prompt, at_sender=True)
 
 
+def get_compara_infos(game_ordersn, is_lotter=False, is_infos=False):
+    """获取对比数据"""
+    try:
+        _prompt = "暂无历史记录"
+        if is_infos:
+            # infos1 = load_infos(game_ordersn)
+            pass
+        else:
+            infos1 = get_infos(game_ordersn)
+        json1 = get_infos_data(infos1)
+        history_url, history_price = find_history_infos(json1)
+        if is_lotter:
+            if int(json1['price']) > int(history_price):
+                return _prompt
+
+        del json1['highlights']
+        del json1['desc_sumup_short']
+        del json1['game_ordersn']
+        del json1['inventory']
+        if isinstance(history_price, int):
+            history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
+            print(history_game_ordersn)
+            infos2 = get_infos(history_game_ordersn)
+            json2 = get_infos_data(infos2)
+            del json2['highlights']
+            del json2['desc_sumup_short']
+            del json2['game_ordersn']
+            del json2['inventory']
+            diff_list = diffrent_data(json2, json1)
+            diff_list.insert(0, "\n")
+            current_url = get_yyscbg_url(game_ordersn)
+            diff_list.append(f"当前价格: {int(json1['price'])}")
+            diff_list.append(f"当前链接: {current_url}")
+            diff_list.append(f"历史价格: {history_price}")
+            diff_list.append(f"历史链接: {history_url}")
+            _prompt = "\n".join(diff_list)
+    except Exception as e:
+        _prompt = MessageSegment.text("代理出错，请重试")
+        print(e)
+    return _prompt
+
+
 @compare_data_level.handle()
 async def search_campare_data(bot: Bot, event: GroupMessageEvent):
     try:
@@ -84,37 +170,9 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
         if not check_vip_infos(user_id):
             _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
-            _prompt = "暂无历史记录"
             game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
             print(game_ordersn)
-            try:
-                infos1 = get_infos(game_ordersn)
-                json1 = get_infos_data(infos1)
-                history_url, history_price = find_history_infos(json1)
-                del json1['highlights']
-                del json1['desc_sumup_short']
-                del json1['game_ordersn']
-                del json1['inventory']
-                if isinstance(history_price, int):
-                    history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
-                    print(history_game_ordersn)
-                    infos2 = get_infos(history_game_ordersn)
-                    json2 = get_infos_data(infos2)
-                    del json2['highlights']
-                    del json2['desc_sumup_short']
-                    del json2['game_ordersn']
-                    del json2['inventory']
-                    diff_list = diffrent_data(json2, json1)
-                    diff_list.insert(0, "\n")
-                    current_url = get_yyscbg_url(game_ordersn)
-                    diff_list.append(f"当前价格: {int(json1['price'])}")
-                    diff_list.append(f"当前链接: {current_url}")
-                    diff_list.append(f"历史价格: {history_price}")
-                    diff_list.append(f"历史链接: {history_url}")
-                    _prompt = "\n".join(diff_list)
-            except Exception as e:
-                _prompt = MessageSegment.text("代理出错，请重试")
-                print(e)
+            _prompt = get_compara_infos(game_ordersn)
     except Exception as e:
         print(e)
         _prompt = MessageSegment.text("链接格式出错，请输入正确链接")
@@ -140,16 +198,42 @@ def check_vip_infos(user_id):
         return False
 
 
-def get_infos(game_ordersn):
-    while True:
-        proxies = None
+# def get_infos(game_ordersn):
+#     while True:
+#         proxies = None
+#         try:
+#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
+#             if infos and infos.get('status_code') not in ["SESSION_TIMEOUT"] and infos.get('status') != 2:
+#                 return infos
+#         except Exception as e:
+#             print(e)
+#         return False
+
+proxy_handle = ProxyTool(proxy_url, http_prefix)
+
+
+def get_infos(game_ordersn, max_num=5):
+    global proxy_handle
+    for i in range(10):
         try:
-            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
-            if infos and infos.get('status_code') not in ["SESSION_TIMEOUT"] and infos.get('status') != 2:
+            if i < max_num:
+                proxies = proxy_handle.get_proxy()
+            else:
+                proxies = None
+            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
+            if infos:
                 return infos
+            proxy_handle.get_proxies()
         except Exception as e:
-            print(e)
-        return False
+            print(f"{e}: 刷新代理: {proxies}")
+    return False
+
+
+# def load_infos(game_ordersn):
+#     """加载文件"""
+#     if []:
+#         return True
+#     return get_infos(game_ordersn)
 
 
 def find_history_infos(infos):
@@ -157,17 +241,34 @@ def find_history_infos(infos):
     server_name = infos["server_name"]
     create_time = infos["create_time"]
     game_ordersn = infos["game_ordersn"]
-
     # 方法一
-    sql = f"""  
-        select *  
-        from yys_cbg.all_cbg_url  
-        where equip_name="{equip_name}"  
-            and server_name='{server_name}'  
-            and status_des=3  
-            and game_ordersn!='{game_ordersn}'  
-            and create_time<='{create_time}'  
-            order by create_time desc  
+    # sql = f"""
+    #     select *
+    #     from yys_cbg.all_cbg_url
+    #     where equip_name="{equip_name}"
+    #         and server_name='{server_name}'
+    #         and status_des=3
+    #         and game_ordersn!='{game_ordersn}'
+    #         and create_time<='{create_time}'
+    #         order by create_time desc
+    # """
+    sql = f"""
+            SELECT
+            game_ordersn,
+            equip_name,
+            server_name,
+            price,
+            create_time,
+            new_roleid
+        FROM
+            yys_cbg.all_cbg_url 
+        WHERE
+            new_roleid IN ( SELECT new_roleid FROM yys_cbg.all_cbg_url WHERE game_ordersn = '{game_ordersn}' ) 
+            AND status_des = 3 
+            AND game_ordersn != '{game_ordersn}' 
+            AND create_time <= '{create_time}' 
+        ORDER BY
+            create_time DESC;
     """
     print(sql)
     _history = select_sql(sql)
@@ -184,7 +285,7 @@ def find_history_infos(infos):
 
     my_sql = YysMysql(cursor_type=True)
     mysql_handle = my_sql.sql_open(mysql_config)
-    for _uuid in uuid_json[:10]:
+    for _uuid in uuid_json[:5]:
         sql = f"""  
             SELECT *  
             FROM yys_cbg.all_cbg_url  
@@ -209,7 +310,91 @@ def find_history_infos(infos):
     return history_url, history_price
 
 
-def parse_yyscbg_url(game_ordersn=None):
+def get_yyscbg_prompt(datas, infos, is_lotter=False):
+    """获取当前链接数据"""
+    _prompt = "暂无历史记录"
+    ssr_flag = datas['ssr_flag']
+    sp_flag = datas['sp_flag']
+    equip_name = datas["equip_name"]
+    server_name = datas["server_name"]
+    status_des = datas["status_des"]
+    highlights = datas["highlights"]
+    price = datas["price"]
+    yuhun_buff = cal_time(datas["yuhun_buff"])
+    goyu = datas["goyu"]
+    hunyu = datas["hunyu"]
+    strength = datas["strength"]
+    speed_infos = datas["speed_infos"]
+    head_info = speed_infos["head_info"]
+    mz_info = speed_infos["mz_info"]
+    dk_info = speed_infos["dk_info"]
+    suit_speed = datas["suit_speed"]
+    fengzidu = datas["fengzidu"]
+    yard_num = len(datas['yard_list'])
+    yard_prefix = f"（{yard_num}）" if yard_num else ''
+    yard_str = "、 ".join(datas["yard_list"])
+    dc_str = "、 ".join(datas["dc_list"])
+    dc_num = len(datas["dc_list"])
+    dc_prefix = f"（{dc_num}）" if dc_num else ''
+    shouban_str = "、 ".join(datas["shouban_list"])
+    shouban_num = len(datas["shouban_list"])
+    shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
+    # 查找历史
+    history_url, history_price = find_history_infos(datas)
+    print(history_url, history_price)
+    if is_lotter:
+        if history_price != '暂无':
+            if int(price) > 1.25 * int(history_price):
+                return _prompt
+            elif int(history_price) <= 800:
+                return _prompt
+        else:
+            if int(price) <= 800 and (sp_flag != 1 or ssr_flag != 1):
+                return _prompt
+    # 不存在入库
+    search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{datas['game_ordersn']}'")
+    if not search_res:
+        parse = CbgDataParser()
+        payload = parse.cbg_parse(infos, is_yuhun=False)
+        payload["status_des"] = check_sale_flag(payload["status_des"])
+        infos = {
+            "game_ordersn": datas['game_ordersn'],
+            "status_des": payload["status_des"],
+            "new_roleid": payload["new_roleid"],
+            "equip_name": payload["equip_name"],
+            "server_name": payload["server_name"],
+            "create_time": payload["create_time"],
+            "price": payload["price"],
+            "update_time": get_now(),
+        }
+        print(f"入库成功：{datas['game_ordersn']}")
+        hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time",
+                            "new_roleid"]
+        update_table_to_all_cbg_url([infos], hope_update_list)
+
+    _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
+              f"高亮文字: {highlights}\n" \
+              f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
+              f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
+              f"============================\n" \
+              f"满速个数: {datas['full_speed_num']}\n" \
+              f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
+              f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
+              f"============================\n" \
+              f"风姿度: {fengzidu}\n" \
+              f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
+              f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
+              f"氪金: {datas['kejin_str']}\n" \
+              f"500天未收录: {datas['sp_coin']}\n" \
+              f"999天未收录: {datas['ssr_coin']}\n" \
+              f"水墨皮兑换券: {datas['special_skin_str1']}\n" \
+              f"限定皮兑换券: {datas['special_skin_str2']}\n" \
+              f"============================\n" \
+              f"输出御魂：{datas['dmg_str']}"
+    return _prompt
+
+
+def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
     _prompt = "链接格式错误~"
     if game_ordersn:
         _num = 1
@@ -226,73 +411,9 @@ def parse_yyscbg_url(game_ordersn=None):
                     _prompt = "代理出错，请重试"
                     continue
                 datas['game_ordersn'] = game_ordersn
-                equip_name = datas["equip_name"]
-                server_name = datas["server_name"]
-                status_des = datas["status_des"]
-                highlights = datas["highlights"]
-                price = datas["price"]
-                yuhun_buff = cal_time(datas["yuhun_buff"])
-                goyu = datas["goyu"]
-                hunyu = datas["hunyu"]
-                strength = datas["strength"]
-                speed_infos = datas["speed_infos"]
-                head_info = speed_infos["head_info"]
-                mz_info = speed_infos["mz_info"]
-                dk_info = speed_infos["dk_info"]
-                suit_speed = datas["suit_speed"]
-                fengzidu = datas["fengzidu"]
-                yard_num = len(datas['yard_list'])
-                yard_prefix = f"（{yard_num}）" if yard_num else ''
-                yard_str = "、 ".join(datas["yard_list"])
-                dc_str = "、 ".join(datas["dc_list"])
-                dc_num = len(datas["dc_list"])
-                dc_prefix = f"（{dc_num}）" if dc_num else ''
-                shouban_str = "、 ".join(datas["shouban_list"])
-                shouban_num = len(datas["shouban_list"])
-                shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
-                # 查找历史
-                history_url, history_price = find_history_infos(datas)
-                print(history_url, history_price)
-                # 不存在入库
-                search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{game_ordersn}'")
-                if not search_res:
-                    parse = CbgDataParser()
-                    payload = parse.cbg_parse(infos, is_yuhun=False)
-                    payload["status_des"] = check_sale_flag(payload["status_des"])
-                    infos = {
-                        "game_ordersn": game_ordersn,
-                        "status_des": payload["status_des"],
-                        "new_roleid": payload["new_roleid"],
-                        "equip_name": payload["equip_name"],
-                        "server_name": payload["server_name"],
-                        "create_time": payload["create_time"],
-                        "price": payload["price"],
-                        "update_time": get_now(),
-                    }
-                    print(f"入库成功：{game_ordersn}")
-                    hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time",
-                                        "new_roleid"]
-                    update_table_to_all_cbg_url([infos], hope_update_list)
-
-                _prompt = f"\n当前链接：{current_url}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
-                          f"高亮文字: {highlights}\n" \
-                          f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
-                          f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
-                          f"============================\n" \
-                          f"满速个数: {datas['full_speed_num']}\n" \
-                          f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
-                          f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
-                          f"============================\n" \
-                          f"风姿度: {fengzidu}\n" \
-                          f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
-                          f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
-                          f"氪金: {datas['kejin_str']}\n" \
-                          f"500天未收录: {datas['sp_coin']}\n" \
-                          f"999天未收录: {datas['ssr_coin']}\n" \
-                          f"水墨皮兑换券: {datas['special_skin_str1']}\n" \
-                          f"限定皮兑换券: {datas['special_skin_str2']}\n" \
-                          f"============================\n" \
-                          f"输出御魂：{dmg_str}"
+                datas['current_url'] = current_url
+                datas['dmg_str'] = dmg_str
+                _prompt = get_yyscbg_prompt(datas, infos, is_lotter)
                 break
             else:
                 if _num >= 3:
