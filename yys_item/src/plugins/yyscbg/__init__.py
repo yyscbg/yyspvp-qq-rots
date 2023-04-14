@@ -344,7 +344,7 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
     print(history_url, history_price)
     if is_lotter:
         if history_price != '暂无':
-            if int(price) > 1.1 * int(history_price):
+            if int(price) > 1.3 * int(history_price):
                 return _prompt
             elif int(history_price) <= 800:
                 return _prompt
