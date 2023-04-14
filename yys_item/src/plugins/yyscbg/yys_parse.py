@@ -481,16 +481,19 @@ def cal_speed_sum_num(speeds_all, n):
     :param n:
     :return:
     """
-    _sum = 0
-    speeds_list = []
-    for i in range(1, 7):
-        speed = speeds_all[str(i)][n - 1]["速度"]
-        yh_type = speeds_all[str(i)][n - 1]["类型"]
-        _sum += speed
-        info = {"位置": i, "类型": yh_type, "速度": round(speed, 8)}
-        speeds_list.append(info)
+    try:
+        _sum = 0
+        speeds_list = []
+        for i in range(1, 7):
+            speed = speeds_all[str(i)][n - 1]["速度"]
+            yh_type = speeds_all[str(i)][n - 1]["类型"]
+            _sum += speed
+            info = {"位置": i, "类型": yh_type, "速度": round(speed, 8)}
+            speeds_list.append(info)
 
-    return _sum, speeds_list
+        return _sum, speeds_list
+    except:
+        return 0, 0
 
 
 def filter_chinese(sp_li):
