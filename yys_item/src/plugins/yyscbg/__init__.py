@@ -344,12 +344,12 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
     print(history_url, history_price)
     if is_lotter:
         if history_price != '暂无':
-            if int(price) > 1.3 * int(history_price):
+            if int(price) > 1.15 * int(history_price):
                 return _prompt
             elif int(history_price) <= 800:
                 return _prompt
         else:
-            if int(price) <= 800 and (sp_flag != 1 or ssr_flag != 1):
+            if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
                 return _prompt
     # 不存在入库
     search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{datas['game_ordersn']}'")
