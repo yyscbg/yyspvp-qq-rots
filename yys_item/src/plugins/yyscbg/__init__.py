@@ -376,19 +376,21 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
               f"高亮文字: {highlights}\n" \
               f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
               f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
-              f"============================\n" \
-              f"满速个数: {datas['full_speed_num']}\n" \
-              f"头: {get_str(head_info['value_list'])}\n尾: {get_str(mz_info['value_list'])}\n" \
-              f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
-              f"============================\n" \
-              f"风姿度: {fengzidu}\n" \
-              f"崽战框: {datas['zaizhan_str']}\n" \
-              f"氪金: {datas['kejin_str']}\n" \
-              f"500天未收录: {datas['sp_coin']}\n" \
-              f"999天未收录: {datas['ssr_coin']}\n" \
-              f"水墨皮兑换券: {datas['special_skin_str1']}\n" \
-              f"限定皮兑换券: {datas['special_skin_str2']}\n" \
               f"============================\n"
+    _prompt += f"满速个数: {datas['full_speed_num']}\n"
+    _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
+    _prompt += f"尾: {get_str(mz_info['value_list'])}\n" if get_str(mz_info['value_list']) else ""
+    _prompt += f"抵抗: {get_str(dk_info['value_list'])} \n" if get_str(dk_info['value_list']) else ""
+    _prompt += f"{get_suit_str(suit_speed, False)}\n"
+    _prompt += f"============================\n"
+    _prompt += f"风姿度: {fengzidu}\n" if fengzidu else ""
+    _prompt += f"崽战框: {datas['zaizhan_str']}\n" if datas['zaizhan_str'] else ""
+    _prompt += f"氪金: {datas['kejin_str']}\n" if datas['kejin_str'] else ""
+    _prompt += f"500天未收录: {datas['sp_coin']}\n" if datas['sp_coin'] else ""
+    _prompt += f"999天未收录: {datas['ssr_coin']}\n" if datas['ssr_coin'] else ""
+    _prompt += f"水墨皮兑换券: {datas['special_skin_str1']}\n" if datas['special_skin_str1'] else ""
+    _prompt += f"限定皮兑换券: {datas['special_skin_str2']}\n" if datas['special_skin_str2'] else ""
+    _prompt += f"============================\n"
     if not is_lotter:
         _prompt += f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"
         _prompt += f"输出御魂：{datas['dmg_str']}"
