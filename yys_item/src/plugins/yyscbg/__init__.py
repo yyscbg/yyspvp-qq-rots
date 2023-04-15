@@ -285,7 +285,7 @@ def find_history_infos(infos):
 
     my_sql = YysMysql(cursor_type=True)
     mysql_handle = my_sql.sql_open(mysql_config)
-    for _uuid in uuid_json[:5]:
+    for _uuid in uuid_json:
         sql = f"""  
             SELECT *  
             FROM yys_cbg.all_cbg_url  
@@ -382,15 +382,21 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
               f"抵抗: {get_str(dk_info['value_list'])} \n{get_suit_str(suit_speed, True)}\n" \
               f"============================\n" \
               f"风姿度: {fengzidu}\n" \
-              f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n" \
-              f"手办框{shouban_prefix}: {shouban_str}\n崽战框: {datas['zaizhan_str']}\n" \
+              f"崽战框: {datas['zaizhan_str']}\n" \
               f"氪金: {datas['kejin_str']}\n" \
               f"500天未收录: {datas['sp_coin']}\n" \
               f"999天未收录: {datas['ssr_coin']}\n" \
               f"水墨皮兑换券: {datas['special_skin_str1']}\n" \
               f"限定皮兑换券: {datas['special_skin_str2']}\n" \
-              f"============================\n" \
-              f"输出御魂：{datas['dmg_str']}"
+              f"============================\n"
+    if not is_lotter:
+        _prompt += f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"
+        _prompt += f"输出御魂：{datas['dmg_str']}"
+        _prompt += f"手办框{shouban_prefix}: {shouban_str}\n"
+    else:
+        _prompt += f"庭院: {yard_prefix}\n典藏: {dc_prefix}\n"
+        _prompt += f"手办框: {shouban_prefix}\n"
+
     return _prompt
 
 

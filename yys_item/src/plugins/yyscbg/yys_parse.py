@@ -700,6 +700,8 @@ def choose_best_uuid(infos: dict):
     if pos_6:
         for pos in pos_6:
             uuid_json.append(pos['uuid'])
+            if len(uuid_json) >= 10:
+                break
     return uuid_json
 
 
