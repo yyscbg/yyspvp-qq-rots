@@ -16,7 +16,7 @@ from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageSegment
 from configs.all_config import mysql_config, proxy_url, http_prefix
 from utils.yys_time import get_now, get_before_Or_after_few_times
 from utils.yys_proxy import ProxyTool
-from utils.common_functions import select_sql, check_sale_flag, search_history, get_yyscbg_url
+from utils.common_functions import select_sql, check_sale_flag, format_number, get_yyscbg_url
 from utils.yys_mysql import YysMysql
 from .yys_spider import get_equip_detail, get_infos_by_kdl
 from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
@@ -321,9 +321,11 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
     highlights = datas["highlights"]
     price = datas["price"]
     yuhun_buff = cal_time(datas["yuhun_buff"])
-    goyu = datas["goyu"]
-    hunyu = datas["hunyu"]
-    strength = datas["strength"]
+    goyu = format_number(datas["goyu"])
+    hunyu = format_number(datas["hunyu"])
+    strength = format_number(datas["strength"])
+    level_15 = format_number(datas['level_15'])
+    currency_900217 = format_number(datas['currency_900217'])
     speed_infos = datas["speed_infos"]
     head_info = speed_infos["head_info"]
     mz_info = speed_infos["mz_info"]
@@ -351,37 +353,17 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
         else:
             if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
                 return _prompt
-    # 不存在入库
-    search_res = select_sql(f"select * from yys_cbg.all_cbg_url where game_ordersn='{datas['game_ordersn']}'")
-    if not search_res:
-        parse = CbgDataParser()
-        payload = parse.cbg_parse(infos, is_yuhun=False)
-        payload["status_des"] = check_sale_flag(payload["status_des"])
-        infos = {
-            "game_ordersn": datas['game_ordersn'],
-            "status_des": payload["status_des"],
-            "new_roleid": payload["new_roleid"],
-            "equip_name": payload["equip_name"],
-            "server_name": payload["server_name"],
-            "create_time": payload["create_time"],
-            "price": payload["price"],
-            "update_time": get_now(),
-        }
-        print(f"入库成功：{datas['game_ordersn']}")
-        hope_update_list = ["price", "status_des", "equip_name", "server_name", "create_time",
-                            "new_roleid"]
-        update_table_to_all_cbg_url([infos], hope_update_list)
 
     _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
               f"高亮文字: {highlights}\n" \
               f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
               f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
+              f"强15+: {level_15}\n蛇皮: {currency_900217}" \
               f"============================\n"
     _prompt += f"满速个数: {datas['full_speed_num']}\n"
     _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
     _prompt += f"尾: {get_str(mz_info['value_list'])}\n" if get_str(mz_info['value_list']) else ""
     _prompt += f"抵抗: {get_str(dk_info['value_list'])} \n" if get_str(dk_info['value_list']) else ""
-    _prompt += f"{get_suit_str(suit_speed, False)}\n"
     _prompt += f"============================\n"
     _prompt += f"风姿度: {fengzidu}\n" if fengzidu else ""
     _prompt += f"崽战框: {datas['zaizhan_str']}\n" if datas['zaizhan_str'] else ""
@@ -392,9 +374,10 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
     _prompt += f"限定皮兑换券: {datas['special_skin_str2']}\n" if datas['special_skin_str2'] else ""
     _prompt += f"============================\n"
     if not is_lotter:
+        _prompt += f"{get_suit_str(suit_speed, True)}\n"
         _prompt += f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"
-        _prompt += f"输出御魂：{datas['dmg_str']}"
         _prompt += f"手办框{shouban_prefix}: {shouban_str}\n"
+        _prompt += f"输出御魂：{datas['dmg_str']}\n"
     else:
         _prompt += f"庭院: {yard_prefix}\n典藏: {dc_prefix}\n"
         _prompt += f"手办框: {shouban_prefix}\n"
