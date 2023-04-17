@@ -505,18 +505,19 @@ def filter_chinese(sp_li):
     :param sp_li:
     :return:
     """
-    for sp in sp_li:
-        speed = {}
-        for k, v in sp.items():
-            if k == "位置":
-                k = "pos"
-            elif k == "类型":
-                k = "yh_type"
-                # v = get_abridge(v)
-            else:
-                k = "speed"
-            speed[k] = v
-        yield speed
+    if sp_li:
+        for sp in sp_li:
+            speed = {}
+            for k, v in sp.items():
+                if k == "位置":
+                    k = "pos"
+                elif k == "类型":
+                    k = "yh_type"
+                    # v = get_abridge(v)
+                else:
+                    k = "speed"
+                speed[k] = v
+            yield speed
 
 
 def get_suit_pos_fast_speed(speeds_all, suit_name="招财猫"):
@@ -614,24 +615,27 @@ def get_speed_info(json_data, full_speed=155):
     # 散件满速、散件列表
     sj_sum, speeds_sj_list = cal_speed_sum_num(speeds_all, 1)
     sj_sum2, speeds_sj_list_2 = cal_speed_sum_num(speeds_all, 2)
+
+    # 除散件一速后独立招财
+    speeds_all2 = remove_independent_speed(speeds_all, 1)
+    zc_sp_list = []
+    zc_sp_sum = 0
+    if speeds_all2 is not None:
+        zc_sp_list, zc_sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
+
     # 散件一速
     fast_speed_list = [
         {
             "suit_name": "散件",
             "speed_sum": sj_sum,
             "speed_list": list(filter_chinese(speeds_sj_list)),
-        }
-    ]
-    # 除散件一速后独立招财
-    speeds_all2 = remove_independent_speed(speeds_all, 1)
-    if speeds_all2 is not None:
-        zc_sp_list, zc_sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
-        fast_speed_list.append({
+        },
+        {
             "suit_name": "除散件外独立招财",
             "speed_sum": zc_sp_sum,
             "speed_list": list(filter_chinese(zc_sp_list)),
-        })
-
+        }
+    ]
     # print(fast_speed_list)
     # 独立招财
     # 默认筛选套装满速大于155
