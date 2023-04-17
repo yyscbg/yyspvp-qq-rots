@@ -505,7 +505,7 @@ def filter_chinese(sp_li):
     :param sp_li:
     :return:
     """
-    if sp_li:
+    if len(sp_li) > 0:
         for sp in sp_li:
             speed = {}
             for k, v in sp.items():
