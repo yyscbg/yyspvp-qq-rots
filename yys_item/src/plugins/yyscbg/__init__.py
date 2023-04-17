@@ -358,7 +358,7 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
               f"高亮文字: {highlights}\n" \
               f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
               f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
-              f"强15+: {level_15}\n蛇皮: {currency_900217}" \
+              f"强15+: {level_15}\n蛇皮: {currency_900217}\n" \
               f"============================\n"
     _prompt += f"满速个数: {datas['full_speed_num']}\n"
     _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
