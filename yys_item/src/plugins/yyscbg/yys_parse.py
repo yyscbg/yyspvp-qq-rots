@@ -505,6 +505,8 @@ def filter_chinese(sp_li):
     :param sp_li:
     :return:
     """
+    if isinstance(sp_li, int):
+        return
     if len(sp_li) > 0:
         for sp in sp_li:
             speed = {}
