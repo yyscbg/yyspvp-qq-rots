@@ -446,7 +446,7 @@ def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
                 datas['game_ordersn'] = game_ordersn
                 datas['current_url'] = current_url
                 datas['dmg_str'] = dmg_str
-                _prompt = get_yyscbg_prompt(datas, infos, is_lotter)
+                _prompt = get_yyscbg_prompt(datas, is_lotter)
                 break
             else:
                 if _num >= 3:
