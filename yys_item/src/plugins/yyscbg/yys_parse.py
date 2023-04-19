@@ -340,8 +340,8 @@ class CbgDataParser:
         shouban_list = [value for key, value in head_skin.items() if value in shouban_head]  # 手办框
         data_skin_hero = [item[1] for item in skin['ss']]
         dc_list = [name for name in dc_skin if name in data_skin_hero]  # 典藏皮肤
-        yzg = equip_desc["yzg"]  # 曜之阁
-        yzq = equip_desc["currency_900073"]  # 曜之契
+        yzg = equip_desc.get('yzg', {})  # 曜之阁
+        yzq = equip_desc.get('currency_900073', 0)  # 曜之契
         yzg_number = (len(yzg.get('effect', [])) + yzq) / 2  # 曜之阁期数
         head_skin_count = equip_desc["head_skin_count"]
         ss_skin_count = [v[1] for key, value in equip_desc['skin'].items() for v in value if key == 'ss']  # 式神皮肤总数

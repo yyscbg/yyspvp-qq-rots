@@ -125,8 +125,8 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
         if not check_vip_infos(user_id):
             _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
-            game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
             try:
+                game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
                 print(game_ordersn)
                 _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
             except Exception as e:
