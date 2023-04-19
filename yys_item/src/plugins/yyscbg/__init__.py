@@ -230,41 +230,41 @@ def check_vip_infos(user_id):
 proxy_handle = ProxyTool(proxy_url, http_prefix)
 
 
-# def get_infos(game_ordersn, max_num=5):
-#     global proxy_handle
-#     for i in range(10):
-#         try:
-#             if i < max_num:
-#                 proxies = proxy_handle.get_proxy()
-#             else:
-#                 proxies = None
-#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
-#             if infos:
-#                 return infos
-#             proxy_handle.get_proxies()
-#         except Exception as e:
-#             print(f"{e}: 刷新代理: {proxies}")
-#     return False
-
-def get_infos(game_ordersn):
-    num = 0
-    while True:
+def get_infos(game_ordersn, max_num=5):
+    global proxy_handle
+    for i in range(10):
         try:
-            username = "t17297453514793"
-            password = "p61gqkms"
-            proxy_ip = "a101.kdltps.com:15818"
-            proxies = {
-                "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip},
-                "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
-            }
-            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
+            if i < max_num:
+                proxies = proxy_handle.get_proxy()
+            else:
+                proxies = None
+            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
             if infos:
                 return infos
-            if num >= 5:
-                break
-            num += 1
+            proxy_handle.get_proxies()
         except Exception as e:
-            print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
+            print(f"{e}: 刷新代理: {proxies}")
+    return False
+
+# def get_infos(game_ordersn):
+#     num = 0
+#     while True:
+#         try:
+#             username = "t17297453514793"
+#             password = "p61gqkms"
+#             proxy_ip = "a101.kdltps.com:15818"
+#             proxies = {
+#                 "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip},
+#                 "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
+#             }
+#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
+#             if infos:
+#                 return infos
+#             if num >= 5:
+#                 break
+#             num += 1
+#         except Exception as e:
+#             print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
 
 
 # def load_infos(game_ordersn):
