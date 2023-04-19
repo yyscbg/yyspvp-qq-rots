@@ -96,7 +96,7 @@ async def get_datas():
 def handle_data(data):
     try:
         # message = get_compara_infos(data['game_ordersn'], True, True)
-        message = parse_yyscbg_url(data, True)
+        message = parse_yyscbg_url(data, True, False)
         if message == "暂无历史记录":
             return False
         return message
@@ -128,7 +128,7 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
             game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
             try:
                 print(game_ordersn)
-                _prompt = parse_yyscbg_url(game_ordersn)
+                _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
             except Exception as e:
                 _prompt = MessageSegment.text("代理出错，请重试")
                 print(e)
@@ -426,13 +426,17 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     return _prompt
 
 
-def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
+def parse_yyscbg_url(game_ordersn=None, is_lotter=False, is_proxy=False):
     _prompt = "链接格式错误~"
     if game_ordersn:
         _num = 1
         while True:
-            # infos = get_infos(game_ordersn)
-            infos = redis_client.batch_pick(game_ordersn, 1)[0]
+            if is_proxy:
+                # 走代理
+                infos = get_infos(game_ordersn)
+            else:
+                # 走redis
+                infos = redis_client.batch_pick(game_ordersn, 1)[0]
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 current_url = get_yyscbg_url(game_ordersn)
