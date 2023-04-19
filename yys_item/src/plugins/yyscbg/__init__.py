@@ -380,8 +380,9 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     shouban_num = len(datas["shouban_list"])
     shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
     before_time_str = get_before_Or_after_few_times(minutes=-40)
-    if datas['create_time'] <= before_time_str:
-        return False
+    if is_lotter:
+        if datas['create_time'] <= before_time_str:
+            return False
     # 查找历史
     history_url, history_price = find_history_infos(datas)
     print(history_url, history_price)
