@@ -86,7 +86,7 @@ async def get_datas():
     # 获取所有keynames
     keynames = redis_client.get_names()
     print(keynames)
-    keynames = keynames[:1]
+
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(handle_data, data) for data in keynames]
