@@ -86,7 +86,6 @@ async def get_datas():
     # 获取所有keynames
     keynames = redis_client.get_names()
     print(keynames)
-
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(handle_data, data) for data in keynames]
@@ -346,7 +345,7 @@ def find_history_infos(infos):
     return history_url, history_price
 
 
-def get_yyscbg_prompt(datas, infos, is_lotter=False):
+def get_yyscbg_prompt(datas, is_lotter=False):
     """获取当前链接数据"""
     _prompt = "暂无历史记录"
     ssr_flag = datas['ssr_flag']
@@ -377,6 +376,9 @@ def get_yyscbg_prompt(datas, infos, is_lotter=False):
     shouban_str = "、 ".join(datas["shouban_list"])
     shouban_num = len(datas["shouban_list"])
     shouban_prefix = f"（{shouban_num}）" if shouban_num else ''
+    before_time_str = get_before_Or_after_few_times(minutes=-40)
+    if datas['create_time'] <= before_time_str:
+        return False
     # 查找历史
     history_url, history_price = find_history_infos(datas)
     print(history_url, history_price)
@@ -427,7 +429,7 @@ def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
         _num = 1
         while True:
             # infos = get_infos(game_ordersn)
-            infos = redis_client.batch_pick(game_ordersn, 1)[0]
+            infos = redis_client.batch_pick(game_ordersn, 10)[0]
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 current_url = get_yyscbg_url(game_ordersn)
