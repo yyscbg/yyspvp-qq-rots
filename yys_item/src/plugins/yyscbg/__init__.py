@@ -13,11 +13,12 @@ from nonebot import get_driver, logger, get_bot, on_command, require
 from nonebot.matcher import Matcher
 from nonebot.adapters import Message, Event
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageSegment
-from configs.all_config import mysql_config, proxy_url, http_prefix
+from configs.all_config import mysql_config, proxy_url, http_prefix, redis_config
 from utils.yys_time import get_now, get_before_Or_after_few_times
 from utils.yys_proxy import ProxyTool
 from utils.common_functions import select_sql, check_sale_flag, format_number, get_yyscbg_url
 from utils.yys_mysql import YysMysql
+from utils.yys_redis import YysRedis
 from .yys_spider import get_equip_detail, get_infos_by_kdl
 from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
 from .yys_cal_about import *
@@ -33,6 +34,14 @@ yyscbg_accept_vip_group = config.get('yyscbg_accept_vip_group', [])
 current_dir = os.path.dirname(os.path.abspath(__file__))
 vip_json_file = os.path.join(current_dir, "vip_infos.json")
 groups = config.get('yyscbg_push_group', [])
+
+# redis
+redis_client = YysRedis(
+    host=redis_config["host"],
+    port=redis_config["port"],
+    password=redis_config["password"],
+    db=0
+)
 
 
 async def group_checker(event: Event) -> bool:
@@ -66,27 +75,32 @@ async def send_notification(bot, group_id, message):
 
 async def get_datas():
     """获取半小时内的数据"""
-    before_time_str = get_before_Or_after_few_times(minutes=-15)
-    after_time_str = get_before_Or_after_few_times(minutes=1)
-    my_sql = YysMysql(cursor_type=True)
-    mysql_handle = my_sql.sql_open(mysql_config)
-    sql = f"SELECT * FROM yys_cbg.all_cbg_url where create_time BETWEEN '{before_time_str}' AND '{after_time_str}'"
-    print(sql)
-    datas = my_sql.select_mysql_record(mysql_handle, sql)
-    my_sql.sql_close(mysql_handle)
+    # before_time_str = get_before_Or_after_few_times(minutes=-15)
+    # after_time_str = get_before_Or_after_few_times(minutes=1)
+    # my_sql = YysMysql(cursor_type=True)
+    # mysql_handle = my_sql.sql_open(mysql_config)
+    # sql = f"SELECT * FROM yys_cbg.all_cbg_url where create_time BETWEEN '{before_time_str}' AND '{after_time_str}'"
+    # print(sql)
+    # datas = my_sql.select_mysql_record(mysql_handle, sql)
+    # my_sql.sql_close(mysql_handle)
+    # 获取所有keynames
+    keynames = redis_client.get_names()
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(handle_data, data) for data in datas]
+        futures = [executor.submit(handle_data, data) for data in keynames]
         last_result = [f.result() for f in concurrent.futures.as_completed(futures) if f.result()]
     return last_result
 
 
 def handle_data(data):
     # message = get_compara_infos(data['game_ordersn'], True, True)
-    message = parse_yyscbg_url(data['game_ordersn'], True)
-    if message == "暂无历史记录":
-        return False
-    return message
+    try:
+        message = parse_yyscbg_url(data, True)
+        if message == "暂无历史记录":
+            return False
+        return message
+    except:
+        return ""
 
 
 @scheduler.scheduled_job('interval', minutes=5)
@@ -247,6 +261,7 @@ def get_infos(game_ordersn):
             num += 1
         except Exception as e:
             print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
+
 
 # def load_infos(game_ordersn):
 #     """加载文件"""
@@ -409,7 +424,8 @@ def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
     if game_ordersn:
         _num = 1
         while True:
-            infos = get_infos(game_ordersn)
+            # infos = get_infos(game_ordersn)
+            infos = redis_client.batch_pick(game_ordersn, 1)
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 current_url = get_yyscbg_url(game_ordersn)
