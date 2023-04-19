@@ -94,13 +94,16 @@ async def get_datas():
 
 
 def handle_data(data):
-    # message = get_compara_infos(data['game_ordersn'], True, True)
     try:
+        # message = get_compara_infos(data['game_ordersn'], True, True)
         message = parse_yyscbg_url(data, True)
         if message == "暂无历史记录":
             return False
         return message
-    except:
+    except Exception as e:
+        # 记录错误信息到日志文件
+        logger.exception("Exception occurred while processing data %s", data)
+        logger.exception(e)
         return ""
 
 
