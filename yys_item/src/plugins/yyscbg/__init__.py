@@ -85,6 +85,8 @@ async def get_datas():
     # my_sql.sql_close(mysql_handle)
     # 获取所有keynames
     keynames = redis_client.get_names()
+    print(keynames)
+    keynames = keynames[:1]
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(handle_data, data) for data in keynames]
@@ -425,7 +427,7 @@ def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
         _num = 1
         while True:
             # infos = get_infos(game_ordersn)
-            infos = redis_client.batch_pick(game_ordersn, 1)
+            infos = redis_client.batch_pick(game_ordersn, 1)[0]
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 current_url = get_yyscbg_url(game_ordersn)
