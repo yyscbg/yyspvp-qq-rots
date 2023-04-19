@@ -550,47 +550,50 @@ def cal_suit_speed(speeds_all, speed_sj_list, suit_name="招财猫"):
     :param suit_name: 御魂类型
     :return:
     """
-    sp_list = []
-    sp_sum = 0
-    compare = [1, 2, 3, 4, 5, 6]
-    speed_list = get_suit_pos_fast_speed(speeds_all, suit_name)
-    lens = len(speed_list)
-    for a in range(0, lens):
-        for b in range(a + 1, lens):
-            for c in range(b + 1, lens):
-                for d in range(c + 1, lens):
-                    a1 = speed_list[a]["速度"]
-                    a1_pos = speed_list[a]["位置"]
+    try:
+        sp_list = []
+        sp_sum = 0
+        compare = [1, 2, 3, 4, 5, 6]
+        speed_list = get_suit_pos_fast_speed(speeds_all, suit_name)
+        lens = len(speed_list)
+        for a in range(0, lens):
+            for b in range(a + 1, lens):
+                for c in range(b + 1, lens):
+                    for d in range(c + 1, lens):
+                        a1 = speed_list[a]["速度"]
+                        a1_pos = speed_list[a]["位置"]
 
-                    b1 = speed_list[b]["速度"]
-                    b1_pos = speed_list[b]["位置"]
+                        b1 = speed_list[b]["速度"]
+                        b1_pos = speed_list[b]["位置"]
 
-                    c1 = speed_list[c]["速度"]
-                    c1_pos = speed_list[c]["位置"]
+                        c1 = speed_list[c]["速度"]
+                        c1_pos = speed_list[c]["位置"]
 
-                    d1 = speed_list[d]["速度"]
-                    d1_pos = speed_list[d]["位置"]
+                        d1 = speed_list[d]["速度"]
+                        d1_pos = speed_list[d]["位置"]
 
-                    delete = [a1_pos, b1_pos, c1_pos, d1_pos]
-                    result = list(set(compare).difference(set(delete)))
-                    e = result[0] - 1
-                    f = result[1] - 1
-                    e1 = speed_sj_list[e]["速度"]
-                    f1 = speed_sj_list[f]["速度"]
-                    _sum = a1 + b1 + c1 + d1 + e1 + f1
-                    if _sum >= sp_sum:
-                        sp_sum = round(_sum, 8)
-                        sp_list = [
-                            speed_list[a],
-                            speed_list[b],
-                            speed_list[c],
-                            speed_list[d],
-                            speed_sj_list[e],
-                            speed_sj_list[f]
-                        ]
-                        sp_list = list_dict_order_by_key(sp_list, "位置", False)
+                        delete = [a1_pos, b1_pos, c1_pos, d1_pos]
+                        result = list(set(compare).difference(set(delete)))
+                        e = result[0] - 1
+                        f = result[1] - 1
+                        e1 = speed_sj_list[e]["速度"]
+                        f1 = speed_sj_list[f]["速度"]
+                        _sum = a1 + b1 + c1 + d1 + e1 + f1
+                        if _sum >= sp_sum:
+                            sp_sum = round(_sum, 8)
+                            sp_list = [
+                                speed_list[a],
+                                speed_list[b],
+                                speed_list[c],
+                                speed_list[d],
+                                speed_sj_list[e],
+                                speed_sj_list[f]
+                            ]
+                            sp_list = list_dict_order_by_key(sp_list, "位置", False)
 
-    return sp_list, sp_sum
+        return sp_list, sp_sum
+    except:
+        return [], 0
 
 
 def get_speed_info(json_data, full_speed=155):
