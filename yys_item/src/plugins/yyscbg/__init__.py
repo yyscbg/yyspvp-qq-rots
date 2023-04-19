@@ -432,7 +432,7 @@ def parse_yyscbg_url(game_ordersn=None, is_lotter=False):
         _num = 1
         while True:
             # infos = get_infos(game_ordersn)
-            infos = redis_client.batch_pick(game_ordersn, 10)[0]
+            infos = redis_client.batch_pick(game_ordersn, 1)[0]
             dmg_str = get_dmg_str(infos)
             if infos and not isinstance(infos, str):
                 current_url = get_yyscbg_url(game_ordersn)
