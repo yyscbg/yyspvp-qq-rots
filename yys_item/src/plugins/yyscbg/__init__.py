@@ -359,10 +359,10 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     highlights = datas["highlights"]
     price = datas["price"]
     yuhun_buff = cal_time(datas["yuhun_buff"])
-    goyu = format_number(datas["goyu"])
-    hunyu = format_number(datas["hunyu"])
-    strength = format_number(datas["strength"])
-    level_15 = format_number(datas['level_15'])
+    goyu = datas["goyu"]
+    hunyu = datas["hunyu"]
+    strength = datas["strength"]
+    level_15 = datas['level_15']
     currency_900217 = format_number(datas['currency_900217'])
     speed_infos = datas["speed_infos"]
     head_info = speed_infos["head_info"]
@@ -387,15 +387,25 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     history_url, history_price = find_history_infos(datas)
     print(history_url, history_price)
     if is_lotter:
-        if history_price != '暂无':
-            if int(price) > 1.15 * int(history_price):
-                return _prompt
-            elif int(history_price) <= 800:
-                return _prompt
-        else:
-            if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
-                return _prompt
+        is_ok = False
+        # 勾玉、魂玉、强15+条件
+        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000:
+            is_ok = True
 
+        if is_ok is False:
+            if history_price != '暂无':
+                if int(price) > 1.15 * int(history_price):
+                    return _prompt
+                elif int(history_price) <= 800:
+                    return _prompt
+            else:
+                if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
+                    return _prompt
+
+    goyu = format_number(datas["goyu"])
+    hunyu = format_number(datas["hunyu"])
+    strength = format_number(datas["strength"])
+    level_15 = format_number(datas['level_15'])
     _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
               f"高亮文字: {highlights}\n" \
               f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
