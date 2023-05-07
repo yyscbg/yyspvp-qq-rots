@@ -127,6 +127,8 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
         else:
             try:
                 # game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+                print(event.message)
+                print(type(event.message))
                 game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
                 print(game_ordersn)
                 _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
