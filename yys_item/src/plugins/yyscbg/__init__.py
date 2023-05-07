@@ -126,7 +126,8 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
             _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
             try:
-                game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+                # game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+                game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
                 print(game_ordersn)
                 _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
             except Exception as e:
@@ -158,7 +159,8 @@ def get_compara_infos(game_ordersn, is_lotter=False, is_infos=False):
         del json1['game_ordersn']
         del json1['inventory']
         if isinstance(history_price, int):
-            history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
+            # history_game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", history_url)[0]
+            history_game_ordersn = re.findall(r"\d+-\d+-\w+", history_url)[0]
             print(history_game_ordersn)
             infos2 = get_infos(history_game_ordersn)
             json2 = get_infos_data(infos2)
@@ -188,7 +190,8 @@ async def search_campare_data(bot: Bot, event: GroupMessageEvent):
         if not check_vip_infos(user_id):
             _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
-            game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+            # game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
+            game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
             print(game_ordersn)
             _prompt = get_compara_infos(game_ordersn)
     except Exception as e:
