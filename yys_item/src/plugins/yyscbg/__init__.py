@@ -107,7 +107,7 @@ def handle_data(data):
         return ""
 
 
-@scheduler.scheduled_job('interval', minutes=5)
+@scheduler.scheduled_job('interval', minutes=51111111)
 async def yyscbg_notice():
     # 5分钟通知一次
     bot = get_bot()
@@ -128,7 +128,7 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
             try:
                 # game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
                 print(event.message)
-                print(type(event.message))
+                print(str(event.message))
                 game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
                 print(game_ordersn)
                 _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
@@ -151,7 +151,11 @@ def get_compara_infos(game_ordersn, is_lotter=False, is_infos=False):
         else:
             infos1 = get_infos(game_ordersn)
         json1 = get_infos_data(infos1)
-        history_url, history_price = find_history_infos(json1)
+
+        try:
+            history_url, history_price = find_history_infos(json1)
+        except:
+            history_url, history_price = ("暂无", "暂无")
         if is_lotter:
             if int(json1['price']) > int(history_price):
                 return _prompt
@@ -368,7 +372,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     hunyu = datas["hunyu"]
     strength = datas["strength"]
     level_15 = datas['level_15']
-    currency_900217 = format_number(datas['currency_900217'])
+    currency_900217 = format_number(datas['currency_900217'])  # 蛇皮
     speed_infos = datas["speed_infos"]
     head_info = speed_infos["head_info"]
     mz_info = speed_infos["mz_info"]
@@ -389,12 +393,15 @@ def get_yyscbg_prompt(datas, is_lotter=False):
         if datas['create_time'] <= before_time_str:
             return False
     # 查找历史
-    history_url, history_price = find_history_infos(datas)
+    try:
+        history_url, history_price = find_history_infos(datas)
+    except:
+        history_url, history_price = ("暂无", "暂无")
     print(history_url, history_price)
     if is_lotter:
         is_ok = False
         # 勾玉、魂玉、强15+条件
-        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000:
+        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000 or currency_900217 >= 100000:
             is_ok = True
 
         if is_ok is False:
@@ -411,32 +418,51 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     hunyu = format_number(datas["hunyu"])
     strength = format_number(datas["strength"])
     level_15 = format_number(datas['level_15'])
-    _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
-              f"高亮文字: {highlights}\n" \
-              f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
-              f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
-              f"强15+: {level_15}\n蛇皮: {currency_900217}\n" \
-              f"============================\n"
-    _prompt += f"满速个数: {datas['full_speed_num']}\n"
-    _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
-    _prompt += f"尾: {get_str(mz_info['value_list'])}\n" if get_str(mz_info['value_list']) else ""
-    _prompt += f"抵抗: {get_str(dk_info['value_list'])} \n" if get_str(dk_info['value_list']) else ""
-    _prompt += f"============================\n"
-    _prompt += f"风姿度: {fengzidu}\n" if fengzidu else ""
-    _prompt += f"崽战框: {datas['zaizhan_str']}\n" if datas['zaizhan_str'] else ""
-    _prompt += f"氪金: {datas['kejin_str']}\n" if datas['kejin_str'] else ""
-    _prompt += f"500天未收录: {datas['sp_coin']}\n" if datas['sp_coin'] else ""
-    _prompt += f"999天未收录: {datas['ssr_coin']}\n" if datas['ssr_coin'] else ""
-    _prompt += f"水墨皮兑换券: {datas['special_skin_str1']}\n" if datas['special_skin_str1'] else ""
-    _prompt += f"限定皮兑换券: {datas['special_skin_str2']}\n" if datas['special_skin_str2'] else ""
-    _prompt += f"============================\n"
     if not is_lotter:
+        _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
+                  f"高亮文字: {highlights}\n" \
+                  f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
+                  f"御魂加成: {yuhun_buff}\n勾玉: {goyu}\n魂玉: {hunyu}\n体力: {strength}\n" \
+                  f"强15+: {level_15}\n蛇皮: {currency_900217}\n" \
+                  f"============================\n"
+        _prompt += f"满速个数: {datas['full_speed_num']}\n"
+        _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
+        _prompt += f"尾: {get_str(mz_info['value_list'])}\n" if get_str(mz_info['value_list']) else ""
+        _prompt += f"抵抗: {get_str(dk_info['value_list'])} \n" if get_str(dk_info['value_list']) else ""
+        _prompt += f"============================\n"
+        _prompt += f"崽战框: {datas['zaizhan_str']}\n" if datas['zaizhan_str'] else ""
+        _prompt += f"氪金: {datas['kejin_str']}\n" if datas['kejin_str'] else ""
+        _prompt += f"500天未收录: {datas['sp_coin']}\n" if datas['sp_coin'] else ""
+        _prompt += f"999天未收录: {datas['ssr_coin']}\n" if datas['ssr_coin'] else ""
+        _prompt += f"水墨皮兑换券: {datas['special_skin_str1']}\n" if datas['special_skin_str1'] else ""
+        _prompt += f"限定皮兑换券: {datas['special_skin_str2']}\n" if datas['special_skin_str2'] else ""
+        _prompt += f"============================\n"
         _prompt += f"{get_suit_str(suit_speed, True)}\n"
         _prompt += f"庭院{yard_prefix}: {yard_str}\n典藏{dc_prefix}: {dc_str}\n"
+        _prompt += f"风姿度: {fengzidu}\n" if fengzidu else ""
         _prompt += f"手办框{shouban_prefix}: {shouban_str}\n"
         _prompt += f"输出御魂：{datas['dmg_str']}\n"
     else:
+        _prompt = f"当前链接：{datas['current_url']}\nID: {equip_name}\n区服: {server_name}\n状态: {status_des}\n" \
+                  f"高亮文字: {highlights}\n" \
+                  f"价格: {int(price)}\n历史价格: {history_price}\n历史链接：{history_url}\n" \
+                  f"勾玉: {goyu}\n强15+: {level_15}\n蛇皮: {currency_900217}\n" \
+                  f"魂玉: {hunyu}\n" \
+                  f"============================\n"
+        _prompt += f"满速个数: {datas['full_speed_num']}\n"
+        # _prompt += f"头: {get_str(head_info['value_list'])}\n" if get_str(head_info['value_list']) else ""
+        # _prompt += f"尾: {get_str(mz_info['value_list'])}\n" if get_str(mz_info['value_list']) else ""
+        # _prompt += f"抵抗: {get_str(dk_info['value_list'])} \n" if get_str(dk_info['value_list']) else ""
+        _prompt += f"============================\n"
+        _prompt += f"崽战框: {datas['zaizhan_str']}\n" if datas['zaizhan_str'] else ""
+        _prompt += f"氪金: {datas['kejin_str']}\n" if datas['kejin_str'] else ""
+        _prompt += f"500天未收录: {datas['sp_coin']}\n" if datas['sp_coin'] else ""
+        _prompt += f"999天未收录: {datas['ssr_coin']}\n" if datas['ssr_coin'] else ""
+        _prompt += f"水墨皮兑换券: {datas['special_skin_str1']}\n" if datas['special_skin_str1'] else ""
+        _prompt += f"限定皮兑换券: {datas['special_skin_str2']}\n" if datas['special_skin_str2'] else ""
+        _prompt += f"============================\n"
         _prompt += f"庭院: {yard_prefix}\n典藏: {dc_prefix}\n"
+        _prompt += f"风姿度: {fengzidu}\n" if fengzidu else ""
         _prompt += f"手办框: {shouban_prefix}\n"
 
     return _prompt
