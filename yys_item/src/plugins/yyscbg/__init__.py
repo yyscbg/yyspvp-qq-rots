@@ -372,7 +372,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     hunyu = datas["hunyu"]
     strength = datas["strength"]
     level_15 = datas['level_15']
-    currency_900217 = format_number(datas['currency_900217'])  # 蛇皮
+    currency_900217 = datas['currency_900217']  # 蛇皮
     speed_infos = datas["speed_infos"]
     head_info = speed_infos["head_info"]
     mz_info = speed_infos["mz_info"]
@@ -414,6 +414,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
                 if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
                     return _prompt
 
+    format_number(datas['currency_900217'])  # 蛇皮
     goyu = format_number(datas["goyu"])
     hunyu = format_number(datas["hunyu"])
     strength = format_number(datas["strength"])
