@@ -401,7 +401,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     if is_lotter:
         is_ok = False
         # 勾玉、魂玉、强15+条件
-        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000 or currency_900217 >= 100000:
+        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000:
             is_ok = True
 
         if is_ok is False:
@@ -414,7 +414,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
                 if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
                     return _prompt
 
-    format_number(datas['currency_900217'])  # 蛇皮
+    currency_900217 = format_number(datas['currency_900217'])  # 蛇皮
     goyu = format_number(datas["goyu"])
     hunyu = format_number(datas["hunyu"])
     strength = format_number(datas["strength"])
