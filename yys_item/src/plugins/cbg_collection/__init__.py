@@ -50,7 +50,42 @@ async def group_checker(event: Event) -> bool:
 
 
 yycbg_collect_level = on_command("yyscbg_collect", rule=group_checker, aliases={'收藏', 'collect', '记录', "添加"},
-                                 priority=1)
+                                 priority=2)
+yycbg_bind_level = on_command("yyscbg_collect", rule=group_checker, aliases={'绑定', 'bind'}, priority=2)
+
+
+@yycbg_bind_level.handle()
+async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
+    try:
+        # 检验是否权限过期
+        user_id = event.get_user_id()
+        print(user_id)
+        if not check_vip_infos(user_id):
+            _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
+        else:
+            try:
+                _prompt = "uuid格式错误！"
+                pattern = "^UID_[a-zA-Z0-9]+$"
+                uuid = str(event.message).split("UID_")[1]
+                uuid = "UID_" + uuid
+                print(uuid)
+                result = re.match(pattern, uuid)
+                if result:
+                    dts = {
+                        'qq': user_id,
+                        'uuid': uuid
+                    }
+                    hope_update_list = ['qq', 'uuid']
+                    insert_table_to_all_cbg_url([dts], hope_update_list, table='qq_robots.user_infos')
+                    _prompt = "绑定成功！"
+
+            except Exception as e:
+                _prompt = MessageSegment.text("uuid格式错误！请联系管理员！")
+                print(e)
+    except Exception as e:
+        print(e)
+        _prompt = MessageSegment.text("绑定异常，请联系管理员排查问题！")
+    await bot.send(event, message=_prompt, at_sender=True)
 
 
 @yycbg_collect_level.handle()
