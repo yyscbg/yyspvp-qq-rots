@@ -127,7 +127,7 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
         else:
             try:
                 _game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
-                _prompt = parse_yyscbg_url(_game_ordersn, True, is_proxy=True)
+                _prompt = parse_yyscbg_url(_game_ordersn, False, is_proxy=True)
             except Exception as e:
                 _prompt = MessageSegment.text("代理出错，请重试")
                 print(e)
