@@ -16,7 +16,7 @@ config = get_driver().config.dict()
 
 yyspvp_accept_group = config.get('yyspvp_accept_group', [])
 
-qd = on_regex(pattern=r'^签到$')
+qd = on_regex(pattern=r'^签到$', priority=3)
 
 
 @qd.handle()

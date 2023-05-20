@@ -83,8 +83,8 @@ async def get_datas():
     # print(sql)
     # datas = my_sql.select_mysql_record(mysql_handle, sql)
     # my_sql.sql_close(mysql_handle)
-    # 获取所有keynames
-    keynames = redis_client.get_names()
+    # 获取最多40个keynames
+    keynames = redis_client.get_names()[:40]
     print(keynames)
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -126,12 +126,8 @@ async def yyscbg_search(bot: Bot, event: GroupMessageEvent):
             _prompt = MessageSegment.text("无权限使用该功能，请找管理员开通或续费")
         else:
             try:
-                # game_ordersn = re.findall("\\d{15}-\\d{1,2}-[0-9A-Z]+", str(event.message))[0]
-                print(event.message)
-                print(str(event.message))
-                game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
-                print(game_ordersn)
-                _prompt = parse_yyscbg_url(game_ordersn, False, is_proxy=True)
+                _game_ordersn = re.findall(r"\d+-\d+-\w+", str(event.message))[0]
+                _prompt = parse_yyscbg_url(_game_ordersn, True, is_proxy=True)
             except Exception as e:
                 _prompt = MessageSegment.text("代理出错，请重试")
                 print(e)
@@ -225,17 +221,6 @@ def check_vip_infos(user_id):
         return False
 
 
-# def get_infos(game_ordersn):
-#     while True:
-#         proxies = None
-#         try:
-#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
-#             if infos and infos.get('status_code') not in ["SESSION_TIMEOUT"] and infos.get('status') != 2:
-#                 return infos
-#         except Exception as e:
-#             print(e)
-#         return False
-
 proxy_handle = ProxyTool(proxy_url, http_prefix)
 
 
@@ -255,50 +240,12 @@ def get_infos(game_ordersn, max_num=5):
             print(f"{e}: 刷新代理: {proxies}")
     return False
 
-# def get_infos(game_ordersn):
-#     num = 0
-#     while True:
-#         try:
-#             username = "t17297453514793"
-#             password = "p61gqkms"
-#             proxy_ip = "a101.kdltps.com:15818"
-#             proxies = {
-#                 "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip},
-#                 "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
-#             }
-#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
-#             if infos:
-#                 return infos
-#             if num >= 5:
-#                 break
-#             num += 1
-#         except Exception as e:
-#             print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
-
-
-# def load_infos(game_ordersn):
-#     """加载文件"""
-#     if []:
-#         return True
-#     return get_infos(game_ordersn)
-
 
 def find_history_infos(infos):
     equip_name = infos["equip_name"]
     server_name = infos["server_name"]
     create_time = infos["create_time"]
     game_ordersn = infos["game_ordersn"]
-    # 方法一
-    # sql = f"""
-    #     select *
-    #     from yys_cbg.all_cbg_url
-    #     where equip_name="{equip_name}"
-    #         and server_name='{server_name}'
-    #         and status_des=3
-    #         and game_ordersn!='{game_ordersn}'
-    #         and create_time<='{create_time}'
-    #         order by create_time desc
-    # """
     sql = f"""
             SELECT
             game_ordersn,
@@ -469,37 +416,21 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     return _prompt
 
 
-def parse_yyscbg_url(game_ordersn=None, is_lotter=False, is_proxy=False):
-    _prompt = "链接格式错误~"
-    if game_ordersn:
-        _num = 1
-        while True:
-            if is_proxy:
-                # 走代理
-                infos = get_infos(game_ordersn)
-            else:
-                # 走redis
-                infos = redis_client.batch_pick(game_ordersn, 1)[0]
+def parse_yyscbg_url(game_ordersn, is_lotter=False, is_proxy=False):
+    _prompt = ""
+    if is_proxy is False:
+        infos = redis_client.batch_pick(game_ordersn, 1)[0]
+    else:
+        infos = get_infos(game_ordersn)
+    if infos and not isinstance(infos, str):
+        current_url = get_yyscbg_url(game_ordersn)
+        datas = get_speed_info(infos)
+        if datas:
             dmg_str = get_dmg_str(infos)
-            if infos and not isinstance(infos, str):
-                current_url = get_yyscbg_url(game_ordersn)
-                datas = get_speed_info(infos)
-                if not datas:
-                    if _num >= 3:
-                        break
-                    _num += 1
-                    _prompt = "代理出错，请重试"
-                    continue
-                datas['game_ordersn'] = game_ordersn
-                datas['current_url'] = current_url
-                datas['dmg_str'] = dmg_str
-                _prompt = get_yyscbg_prompt(datas, is_lotter)
-                break
-            else:
-                if _num >= 3:
-                    break
-                _num += 1
-                _prompt = "代理出错，请重试"
+            datas['game_ordersn'] = game_ordersn
+            datas['current_url'] = current_url
+            datas['dmg_str'] = dmg_str
+            _prompt = get_yyscbg_prompt(datas, is_lotter)
     return _prompt
 
 
