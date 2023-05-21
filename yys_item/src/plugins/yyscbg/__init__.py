@@ -84,7 +84,7 @@ async def get_datas():
     # datas = my_sql.select_mysql_record(mysql_handle, sql)
     # my_sql.sql_close(mysql_handle)
     # 获取最多40个keynames
-    keynames = redis_client.get_names()[:40]
+    keynames = redis_client.get_names()[:60]
     print(keynames)
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
