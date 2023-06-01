@@ -1,6 +1,5 @@
 # 用户签到表
 CREATE TABLE `user_infos` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `qq` varchar(15) NOT NULL,
   `sign_date` varchar(12) DEFAULT NULL COMMENT '签到日期',
   `sign_num` int(11) DEFAULT '0' COMMENT '签到次数',
@@ -9,25 +8,26 @@ CREATE TABLE `user_infos` (
   `update_time` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
   `username` varchar(50) DEFAULT NULL COMMENT '用户名称',
   `vip_expiration` datetime DEFAULT NULL COMMENT 'VIP时效',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `qq` (`qq`),
-  KEY `sign_date` (`sign_date`) USING BTREE
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
-
+  `uuid` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`qq`),
+  KEY `sign_date` (`sign_date`) USING BTREE,
+  KEY `uuid_index` (`uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=46 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
 
 
 
 /* 用户收藏链接（价格升降，售卖状态）*/
 CREATE TABLE `bookmarks` (
-  `id` INT UNSIGNED NOT NULL PRIMARY KEY AUTO_INCREMENT,
-  `user_id` INT UNSIGNED NOT NULL COMMENT '用户ID',
-  `game_ordersn` VARCHAR(255) NOT NULL COMMENT '收藏链接',
-  `price` int(11) NOT NULL DEFAULT '0' COMMENT '价格',
+  `user_id` int(12) unsigned NOT NULL COMMENT '用户ID',
+  `game_ordersn` varchar(255) NOT NULL COMMENT '收藏链接',
+  `first_price` int(11) NOT NULL DEFAULT '0' COMMENT '首次价格',
+  `current_price` int(11) NOT NULL DEFAULT '0' COMMENT '当前价格',
   `status_des` int(11) DEFAULT '0' COMMENT '售卖状态',
-  `description` TEXT COMMENT '收藏描述',
-  `add_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '添加时间',
-  `update_time` TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `description` text COMMENT '收藏描述',
+  `add_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '添加时间',
+  `update_time` timestamp NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`user_id`,`game_ordersn`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 
 
