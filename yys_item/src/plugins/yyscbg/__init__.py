@@ -19,7 +19,7 @@ from utils.yys_proxy import ProxyTool
 from utils.common_functions import select_sql, check_sale_flag, format_number, get_yyscbg_url
 from utils.yys_mysql import YysMysql
 from utils.yys_redis import YysRedis
-from .yys_spider import get_equip_detail, get_infos_by_kdl
+from .yys_spider import get_equip_detail, get_infos_by_kdl as get_infos
 from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
 from .yys_cal_about import *
 from .lotter_system import diffrent_data, get_infos_data
@@ -84,7 +84,7 @@ async def get_datas():
     # datas = my_sql.select_mysql_record(mysql_handle, sql)
     # my_sql.sql_close(mysql_handle)
     # 获取最多40个keynames
-    keynames = redis_client.get_names()[:60]
+    keynames = redis_client.get_names()
     print(keynames)
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
@@ -224,21 +224,21 @@ def check_vip_infos(user_id):
 proxy_handle = ProxyTool(proxy_url, http_prefix)
 
 
-def get_infos(game_ordersn, max_num=5):
-    global proxy_handle
-    for i in range(10):
-        try:
-            if i < max_num:
-                proxies = proxy_handle.get_proxy()
-            else:
-                proxies = None
-            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
-            if infos:
-                return infos
-            proxy_handle.get_proxies()
-        except Exception as e:
-            print(f"{e}: 刷新代理: {proxies}")
-    return False
+# def get_infos(game_ordersn, max_num=5):
+#     global proxy_handle
+#     for i in range(10):
+#         try:
+#             if i < max_num:
+#                 proxies = proxy_handle.get_proxy()
+#             else:
+#                 proxies = None
+#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
+#             if infos:
+#                 return infos
+#             proxy_handle.get_proxies()
+#         except Exception as e:
+#             print(f"{e}: 刷新代理: {proxies}")
+#     return False
 
 
 def find_history_infos(infos):
