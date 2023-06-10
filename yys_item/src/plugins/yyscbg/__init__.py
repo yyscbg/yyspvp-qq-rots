@@ -40,7 +40,7 @@ redis_client = YysRedis(
     host=redis_config["host"],
     port=redis_config["port"],
     password=redis_config["password"],
-    db=0
+    db=5
 )
 
 
@@ -75,17 +75,9 @@ async def send_notification(bot, group_id, message):
 
 async def get_datas():
     """获取半小时内的数据"""
-    # before_time_str = get_before_Or_after_few_times(minutes=-15)
-    # after_time_str = get_before_Or_after_few_times(minutes=1)
-    # my_sql = YysMysql(cursor_type=True)
-    # mysql_handle = my_sql.sql_open(mysql_config)
-    # sql = f"SELECT * FROM yys_cbg.all_cbg_url where create_time BETWEEN '{before_time_str}' AND '{after_time_str}'"
-    # print(sql)
-    # datas = my_sql.select_mysql_record(mysql_handle, sql)
-    # my_sql.sql_close(mysql_handle)
-    # 获取最多40个keynames
+    # 获取最多60个keynames
     keynames = redis_client.get_names()
-    print(keynames)
+    print(len(keynames))
     # 使用多线程并行处理
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         futures = [executor.submit(handle_data, data) for data in keynames]
@@ -107,7 +99,7 @@ def handle_data(data):
         return ""
 
 
-@scheduler.scheduled_job('interval', minutes=8, max_instances=3)
+@scheduler.scheduled_job('interval', minutes=3, max_instances=3)
 async def yyscbg_notice():
     # 5分钟通知一次
     bot = get_bot()
@@ -419,21 +411,24 @@ def get_yyscbg_prompt(datas, is_lotter=False):
 
 
 def parse_yyscbg_url(game_ordersn, is_lotter=False, is_proxy=False):
-    _prompt = ""
-    if is_proxy is False:
-        infos = redis_client.batch_pick(game_ordersn, 1)[0]
-    else:
-        infos = get_infos(game_ordersn)
-    if infos and not isinstance(infos, str):
-        current_url = get_yyscbg_url(game_ordersn)
-        datas = get_speed_info(infos)
-        if datas:
-            dmg_str = get_dmg_str(infos)
-            datas['game_ordersn'] = game_ordersn
-            datas['current_url'] = current_url
-            datas['dmg_str'] = dmg_str
-            _prompt = get_yyscbg_prompt(datas, is_lotter)
+    _prompt = redis_client.get(game_ordersn)
+    redis_client.delete(game_ordersn)
     return _prompt
+    # _prompt = ""
+    # if is_proxy is False:
+    #     infos = redis_client.batch_pick(game_ordersn, 1)[0]
+    # else:
+    #     infos = get_infos(game_ordersn)
+    # if infos and not isinstance(infos, str):
+    #     current_url = get_yyscbg_url(game_ordersn)
+    #     datas = get_speed_info(infos)
+    #     if datas:
+    #         dmg_str = get_dmg_str(infos)
+    #         datas['game_ordersn'] = game_ordersn
+    #         datas['current_url'] = current_url
+    #         datas['dmg_str'] = dmg_str
+    #         _prompt = get_yyscbg_prompt(datas, is_lotter)
+    # return _prompt
 
 
 def update_table_to_all_cbg_url(list_values, hope_update_list):

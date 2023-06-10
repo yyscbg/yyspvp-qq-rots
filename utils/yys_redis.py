@@ -105,6 +105,12 @@ class YysRedis:
             return False
         return result
 
+    def set(self, name, value, **kwargs):
+        self.conn.set(name, value, **kwargs)
+
+    def get(self, name):
+        return self.conn.get(name)
+
     def llen(self, name):
         """
         获取key长度
