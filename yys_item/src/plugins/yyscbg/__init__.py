@@ -107,7 +107,7 @@ def handle_data(data):
         return ""
 
 
-@scheduler.scheduled_job('interval', minutes=5)
+@scheduler.scheduled_job('interval', minutes=8, max_instances=3)
 async def yyscbg_notice():
     # 5分钟通知一次
     bot = get_bot()
