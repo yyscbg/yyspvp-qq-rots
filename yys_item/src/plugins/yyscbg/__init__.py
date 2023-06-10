@@ -282,7 +282,7 @@ def find_history_infos(infos):
     for _uuid in uuid_json:
         sql = f"""  
             SELECT 
-                ame_ordersn, seller_roleid, equip_name, server_name, status_des, update_time, 
+                game_ordersn, seller_roleid, equip_name, server_name, status_des, update_time, 
                 price, create_time, es_flag, new_roleid
             FROM yys_cbg.all_cbg_url  
             WHERE JSON_CONTAINS(uuid_json, '"{_uuid}"')  
