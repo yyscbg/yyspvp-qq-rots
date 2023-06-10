@@ -415,7 +415,6 @@ def parse_yyscbg_url(game_ordersn, is_lotter=False, is_proxy=False):
     if is_proxy is False:
         _prompt = redis_client.get(game_ordersn)
         redis_client.delete(game_ordersn)
-        return _prompt
     else:
         infos = get_infos(game_ordersn)
         if infos and not isinstance(infos, str):
@@ -427,7 +426,7 @@ def parse_yyscbg_url(game_ordersn, is_lotter=False, is_proxy=False):
                 datas['current_url'] = current_url
                 datas['dmg_str'] = dmg_str
                 _prompt = get_yyscbg_prompt(datas, is_lotter)
-        return _prompt
+    return _prompt
 
 
 def update_table_to_all_cbg_url(list_values, hope_update_list):
