@@ -375,6 +375,7 @@ def get_yyscbg_prompt(datas, is_lotter=False):
     # 查找历史
     try:
         # history_url, history_price = find_history_infos(datas)
+        print(datas["uuid_json"], datas['game_ordersn'], datas['create_time'])
         history_url, history_price, history_time = es_search(
             datas["uuid_json"],
             datas['game_ordersn'],

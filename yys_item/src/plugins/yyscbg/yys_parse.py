@@ -513,9 +513,10 @@ def get_speeds_all(data_info):
     return speeds_all
 
 
-def get_full_speed_number(speeds_all, standard_speed=15):
+def get_full_speed_number(speeds_all, standard_speed=15, is_values=False):
     """获取满速个数"""
     _sum = 0
+    result = {"1": [], "2": [], "3": [], "4": [], "5": [], "6": []}
     for pos, value in speeds_all.items():
         temp_standard = standard_speed
         if pos == '2':
@@ -523,19 +524,21 @@ def get_full_speed_number(speeds_all, standard_speed=15):
         for _ in value:
             if _["速度"] >= temp_standard:
                 _sum += 1
-    return _sum
+                result[pos].append(_)
+    if not is_values:
+        return _sum
+    else:
+        return _sum, result
 
 
 def remove_independent_speed(speeds_all, n):
     """移除独立速度"""
-    try:
-        new_speeds_all = copy.deepcopy(speeds_all)
-        for i in range(1, 7):
-            for x in range(n):
-                del new_speeds_all[str(i)][n - 1]
-        return new_speeds_all
-    except:
-        return None
+    import copy
+    new_speeds_all = copy.deepcopy(speeds_all)
+    for i in range(1, 7):
+        for x in range(n):
+            del new_speeds_all[str(i)][n - 1]
+    return new_speeds_all
 
 
 def cal_speed_sum_num(speeds_all, n):
@@ -545,19 +548,19 @@ def cal_speed_sum_num(speeds_all, n):
     :param n:
     :return:
     """
+    _sum = 0
+    speeds_list = []
     try:
-        _sum = 0
-        speeds_list = []
         for i in range(1, 7):
             speed = speeds_all[str(i)][n - 1]["速度"]
             yh_type = speeds_all[str(i)][n - 1]["类型"]
+            uuid = speeds_all[str(i)][n - 1]['uuid']
             _sum += speed
-            info = {"位置": i, "类型": yh_type, "速度": round(speed, 8)}
+            info = {"位置": i, "类型": yh_type, "速度": round(speed, 2), "uuid": uuid}
             speeds_list.append(info)
-
-        return _sum, speeds_list
     except:
-        return 0, 0
+        pass
+    return _sum, speeds_list
 
 
 def filter_chinese(sp_li):
@@ -566,24 +569,22 @@ def filter_chinese(sp_li):
     :param sp_li:
     :return:
     """
-    if isinstance(sp_li, int):
-        return
-    if len(sp_li) > 0:
-        for sp in sp_li:
-            speed = {}
-            for k, v in sp.items():
-                if k == "位置":
-                    k = "pos"
-                elif k == "类型":
-                    k = "yh_type"
-                    # v = get_abridge(v)
-                else:
-                    k = "speed"
-                speed[k] = v
-            yield speed
+    for sp in sp_li:
+        speed = {}
+        for k, v in sp.items():
+            if k == "位置":
+                k = "pos"
+            elif k == "类型":
+                k = "yh_type"
+                # v = get_abridge(v)
+                v = v
+            elif k == '速度':
+                k = "speed"
+            speed[k] = v
+        yield speed
 
 
-def get_suit_pos_fast_speed(speeds_all, suit_name="招财猫"):
+def get_suit_pos_fast_speed(speeds_all, suit_name="招财猫", is_new=False):
     """
     获取套装各个位置最快速度
     :param speeds_all:
@@ -594,11 +595,15 @@ def get_suit_pos_fast_speed(speeds_all, suit_name="招财猫"):
     for i in range(1, 7):
         for y in speeds_all[str(i)]:
             if y["类型"] == suit_name:
-                speeds_list.append({
-                    "位置": i,
-                    "类型": y["类型"],
-                    "速度": round(y["速度"], 8) if y["速度"] else 0
-                })
+                if is_new:
+                    speeds_list.append(y)
+                else:
+                    speeds_list.append({
+                        "位置": i,
+                        "类型": y["类型"],
+                        "速度": round(y["速度"], 2) if y["速度"] else 0,
+                        "uuid": y["uuid"]
+                    })
                 break
     return speeds_list
 
@@ -611,53 +616,65 @@ def cal_suit_speed(speeds_all, speed_sj_list, suit_name="招财猫"):
     :param suit_name: 御魂类型
     :return:
     """
-    try:
-        sp_list = []
-        sp_sum = 0
-        compare = [1, 2, 3, 4, 5, 6]
-        speed_list = get_suit_pos_fast_speed(speeds_all, suit_name)
-        lens = len(speed_list)
-        for a in range(0, lens):
-            for b in range(a + 1, lens):
-                for c in range(b + 1, lens):
-                    for d in range(c + 1, lens):
-                        a1 = speed_list[a]["速度"]
-                        a1_pos = speed_list[a]["位置"]
+    sp_list = []
+    sp_sum = 0
+    compare = [1, 2, 3, 4, 5, 6]
+    speed_list = get_suit_pos_fast_speed(speeds_all, suit_name)
+    lens = len(speed_list)
+    for a in range(0, lens):
+        for b in range(a + 1, lens):
+            for c in range(b + 1, lens):
+                for d in range(c + 1, lens):
+                    a1 = speed_list[a]["速度"]
+                    a1_pos = speed_list[a]["位置"]
 
-                        b1 = speed_list[b]["速度"]
-                        b1_pos = speed_list[b]["位置"]
+                    b1 = speed_list[b]["速度"]
+                    b1_pos = speed_list[b]["位置"]
 
-                        c1 = speed_list[c]["速度"]
-                        c1_pos = speed_list[c]["位置"]
+                    c1 = speed_list[c]["速度"]
+                    c1_pos = speed_list[c]["位置"]
 
-                        d1 = speed_list[d]["速度"]
-                        d1_pos = speed_list[d]["位置"]
+                    d1 = speed_list[d]["速度"]
+                    d1_pos = speed_list[d]["位置"]
 
-                        delete = [a1_pos, b1_pos, c1_pos, d1_pos]
-                        result = list(set(compare).difference(set(delete)))
-                        e = result[0] - 1
-                        f = result[1] - 1
-                        e1 = speed_sj_list[e]["速度"]
-                        f1 = speed_sj_list[f]["速度"]
-                        _sum = a1 + b1 + c1 + d1 + e1 + f1
-                        if _sum >= sp_sum:
-                            sp_sum = round(_sum, 8)
-                            sp_list = [
-                                speed_list[a],
-                                speed_list[b],
-                                speed_list[c],
-                                speed_list[d],
-                                speed_sj_list[e],
-                                speed_sj_list[f]
-                            ]
-                            sp_list = list_dict_order_by_key(sp_list, "位置", False)
+                    delete = [a1_pos, b1_pos, c1_pos, d1_pos]
+                    result = list(set(compare).difference(set(delete)))
+                    e = result[0] - 1
+                    f = result[1] - 1
+                    e1 = speed_sj_list[e]["速度"]
+                    f1 = speed_sj_list[f]["速度"]
+                    _sum = a1 + b1 + c1 + d1 + e1 + f1
+                    if _sum >= sp_sum:
+                        sp_sum = round(_sum, 2)
+                        sp_list = [
+                            speed_list[a],
+                            speed_list[b],
+                            speed_list[c],
+                            speed_list[d],
+                            speed_sj_list[e],
+                            speed_sj_list[f]
+                        ]
+                        sp_list = list_dict_order_by_key(sp_list, "位置", False)
 
-        return sp_list, sp_sum
-    except:
-        return [], 0
+    return sp_list, sp_sum
 
 
-def get_speed_info(json_data, full_speed=155):
+def check_include_yuhun(sp_li, uuid_list):
+    """检查是否包含特殊御魂"""
+    return any(sp['pos'] == 4 and sp['uuid'] in uuid_list for sp in sp_li)
+
+
+def cal_max_another_three_speed(sp_li, suit_name=None):
+    """计算最大3个速度"""
+    if suit_name is not None:
+        filtered_data = [d for d in sp_li if d['yh_type'] == suit_name]
+    else:
+        filtered_data = sp_li
+    sorted_data = sorted(filtered_data, key=lambda x: x['speed'], reverse=True)
+    return sum(round(d['speed'], 4) if d['pos'] != 2 else round(d['speed'] - 57, 4) for d in sorted_data[:3])
+
+
+def get_speed_info(data_infos, full_speed=155, x_hero=x_hero):
     """
     合并成es索引结构数据
     :param json_data:
@@ -665,57 +682,73 @@ def get_speed_info(json_data, full_speed=155):
     :return:
     """
     parse = CbgDataParser()
-    data = parse.cbg_parse(json_data)
-    yuhun_json = parse.init_yuhun(data["inventory"])
+    json_data = parse.cbg_parse(data_infos, x_hero=x_hero)
+    yuhun_json = parse.init_yuhun(json_data["inventory"])
     # 御魂分组1-6
     data_info = parse.sort_pos(yuhun_json)
+    # 查找uuid_json
+    uuid_infos = find_yuhun_uuid(data_info)
+    uuid_json = choose_best_uuid(uuid_infos)
+    json_data.update({"uuid_json": uuid_json})
     # 速度御魂列表
     speeds_all = get_speeds_all(data_info)
     # 满速个数
-    full_speed_num = get_full_speed_number(speeds_all, 15)
-    data.update({"full_speed_num": full_speed_num})
-    # 二号位
-    head_info = parse.find_yuhun_head(speeds_all, False)
-    # 命中、抵抗
-    mz_info, dk_info = parse.find_yuhun_mzdk(speeds_all, False)
-    # 散件满速、散件列表
-    sj_sum, speeds_sj_list = cal_speed_sum_num(speeds_all, 1)
-    sj_sum2, speeds_sj_list_2 = cal_speed_sum_num(speeds_all, 2)
+    full_speed_num, full_speed_value = get_full_speed_number(speeds_all, 15, True)
+    json_data.update({"full_speed_num": full_speed_num})
+    json_data.update({"full_speed_value": full_speed_value})
 
     # 除散件一速后独立招财
-    speeds_all2 = remove_independent_speed(speeds_all, 1)
-    zc_sp_list = []
-    zc_sp_sum = 0
-    if speeds_all2 is not None:
-        zc_sp_list, zc_sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
+    # speeds_all2 = remove_independent_speed(speeds_all, 1)
+    # zc_sp_list, zc_sp_sum = cal_suit_speed(speeds_all2, speeds_sj_list_2, "招财猫")
+    # 命中、抵抗
+    mz_info, dk_info = parse.find_yuhun_mzdk(speeds_all)
+    mz_uuid = [_['uuid'] for _ in mz_info["value_list"]]
+    dk_uuid = [_['uuid'] for _ in dk_info["value_list"]]
+    # 二号位
+    head_info = parse.find_yuhun_head(speeds_all)
 
-    # 散件一速
-    fast_speed_list = [
-        {
-            "suit_name": "散件",
-            "speed_sum": sj_sum,
-            "speed_list": list(filter_chinese(speeds_sj_list)),
-        },
-        {
-            "suit_name": "除散件外独立招财",
-            "speed_sum": zc_sp_sum,
-            "speed_list": list(filter_chinese(zc_sp_list)),
-        }
-    ]
-    # print(fast_speed_list)
-    # 独立招财
-    # 默认筛选套装满速大于155
-    for suit_name in parse.yuhun_list:
-        sp_list, sp_sum = cal_suit_speed(speeds_all, speeds_sj_list, suit_name)
-        if sp_sum > full_speed:
+    # 一速
+    fast_speed_list = []
+    # 前四散件独立套
+    for i in range(1, 5):
+        # 散件满速、散件列表
+        try:
+            sj_sum, speeds_sj_list_temp = cal_speed_sum_num(speeds_all, i)
+            speed_list = list(filter_chinese(speeds_sj_list_temp))
             fast_speed_list.append({
-                # "suit_name": get_abridge(suit_name),
-                "suit_name": suit_name,
-                "speed_sum": round(sp_sum, 4),
-                "speed_list": list(filter_chinese(sp_list)),
-                # "speed_list": sp_list,
+                # "suit_name": "san_jian",
+                # "speed_list": speeds_sj_list,
+                "three_sum": round(cal_max_another_three_speed(speed_list), 2),
+                "is_mz": 1 if check_include_yuhun(speed_list, mz_uuid) else 0,
+                "is_dk": 1 if check_include_yuhun(speed_list, dk_uuid) else 0,
+                "suit_name": f"散件{i}",
+                "speed_sum": round(sj_sum, 2),
+                "speed_list": speed_list,
             })
-    data.update({
+        except Exception as e:
+            if e.__str__() != "list index out of range":
+                print(e)
+    # 默认筛选套装满速大于150
+    sj_sum, speeds_sj_list = cal_speed_sum_num(speeds_all, 1)
+    for suit_name in parse.yuhun_list:
+        try:
+            sp_list, sp_sum = cal_suit_speed(speeds_all, speeds_sj_list, suit_name)
+            speed_list = list(filter_chinese(sp_list))
+            if sp_sum > full_speed:
+                fast_speed_list.append({
+                    # "speed_list": sp_list,
+                    # "suit_name": get_abridge(suit_name),
+                    "three_sum": round(cal_max_another_three_speed(speed_list, suit_name), 2),
+                    "is_mz": 1 if check_include_yuhun(speed_list, mz_uuid) else 0,
+                    "is_dk": 1 if check_include_yuhun(speed_list, dk_uuid) else 0,
+                    "suit_name": suit_name,
+                    "speed_sum": round(sp_sum, 2),
+                    "speed_list": speed_list,
+                })
+        except Exception as e:
+            if "speeds_sj_list" not in e.__str__():
+                print(e)
+    json_data.update({
         "speed_infos": {
             "head_info": head_info,
             "mz_info": mz_info,
@@ -723,7 +756,21 @@ def get_speed_info(json_data, full_speed=155):
         },
         "suit_speed": sorted(fast_speed_list, key=lambda e: e["speed_sum"], reverse=True)
     })
-    return data
+    try:
+        data_yuhun_std = extract_data_cbg(data_infos)
+        if optimize_data_for_cal(data_yuhun_std):
+            dmg_yuhun = pick_dmg_yuhun_all(
+                data_yuhun_std,
+                common_score=8,  # 普通分数
+                special_score=10,  # 逢魔皮分数
+                is_speed_limit=True
+            )
+            json_data.update({"dmg_yuhun": dmg_yuhun})
+    except Exception as e:
+        print(e)
+        json_data.update({"dmg_yuhun": {}})
+    del json_data["inventory"]
+    return json_data
 
 
 def find_yuhun_uuid(dts):
@@ -731,10 +778,10 @@ def find_yuhun_uuid(dts):
     uuid_list = {}
     for k, values in dts.items():
         if k == '2':
-            uuid_list["2"] = []
-            for item in values:
-                if '速度' in item.keys() and item['速度'] >= (57 + 15):
-                    uuid_list["2"].append(item)
+            uuid_list["2"] = [item for item in values if '速度' in item.keys() and item['速度'] >= (57 + 15)]
+            if len(uuid_list["2"]) == 0:
+                uuid_list["2"] = [item for item in values if '速度' in item.keys() and item['速度'] >= 57][:10]
+
         elif k == '4':
             uuid_list["4"] = []
             for item in values:
@@ -744,10 +791,9 @@ def find_yuhun_uuid(dts):
                     if '效果命中' in item.keys() and item['效果命中'] >= 55:
                         uuid_list["4"].append(item)
         elif k == '6':
-            uuid_list["6"] = []
-            for item in values:
-                if '暴击伤害' in item.keys() and item['暴击伤害'] >= 89:
-                    uuid_list["6"].append(item)
+            uuid_list["6"] = [item for item in values if '暴击伤害' in item.keys() and item['暴击伤害'] >= 89]
+            if len(uuid_list["2"]) == 0:
+                uuid_list["6"] = [item for item in values if '暴击伤害' in item.keys() and item['暴击伤害'] >= 55][:10]
 
     uuid_list['2'] = list_dict_order_by_key(uuid_list['2'], "速度", True)
     uuid_list['4'] = list_dict_order_by_key(uuid_list['4'], "速度", True)
@@ -773,8 +819,7 @@ def choose_best_uuid(infos: dict):
     if pos_6:
         for pos in pos_6:
             uuid_json.append(pos['uuid'])
-            if len(uuid_json) >= 10:
-                break
+
     return uuid_json
 
 
