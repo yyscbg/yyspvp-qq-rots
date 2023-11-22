@@ -177,22 +177,24 @@ class CbgDataParser:
             max_info = {"yh_type": value_list[0]["yh_type"], "max_value": value_list[0]["speed"]}
         return {"sum_value": sum_value, "max_info": max_info, "value_list": value_list}
 
-    def find_yuhun_head(self, data_info, is_abridge=True, min_value=15):
+    def find_yuhun_head(self, data_info, is_abridge=False, min_value=15):
         """
         查找二号位满速
         :param data_info:
         :return:
         """
+        index = 1
         head_info = []
         for data in data_info["2"]:
             if "速度" in data:
                 if data["速度"] > 72:
-                    speed = round(data["速度"] - 57, 5)
+                    speed = round(data["速度"] - 57, 3)
                     if is_abridge:
                         yh_type = get_abridge(data["类型"])
                     else:
                         yh_type = data["类型"]
-                    value = {"yh_type": yh_type, "speed": speed}
+                    value = {"yh_type": yh_type, "speed": speed, "index": index, "uuid": data['uuid']}
+                    index += 1
                     head_info.append(value)
         return self.set_speed_infos(head_info)
 
