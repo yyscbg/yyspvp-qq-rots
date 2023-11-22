@@ -196,7 +196,7 @@ class CbgDataParser:
                     head_info.append(value)
         return self.set_speed_infos(head_info)
 
-    def find_yuhun_mzdk(self, data_info, is_abridge=True):
+    def find_yuhun_mzdk(self, data_info, is_abridge=False):
         """
         查找命中、抵抗满速（筛选四号位、含速度、大于15速、主属性55以上）
         :param data_info:
@@ -204,21 +204,27 @@ class CbgDataParser:
         """
         yuhun_mz = []
         yuhun_dk = []
+        index_dk = 1
+        index_mz = 1
         for data in data_info["4"]:
             if "速度" in data:
                 if data["速度"] > 15:
                     for pos4_name in ["效果抵抗", "效果命中"]:
                         if pos4_name in data:
                             if data[pos4_name] >= 55:
-                                speed = round(data["速度"], 8)
+                                speed = round(data["速度"], 2)
                                 if is_abridge:
                                     yh_type = get_abridge(data["类型"])
                                 else:
                                     yh_type = data["类型"]
-                                value = {"yh_type": yh_type, "speed": speed}
+                                value = {"yh_type": yh_type, "speed": speed, "uuid": data['uuid']}
                                 if "抵抗" in pos4_name:
+                                    value.update({"index": index_dk})
+                                    index_dk += 1
                                     yuhun_dk.append(value)
                                 else:
+                                    value.update({"index": index_mz})
+                                    index_mz += 1
                                     yuhun_mz.append(value)
                                 break
         mz_infos = self.set_speed_infos(yuhun_mz)
