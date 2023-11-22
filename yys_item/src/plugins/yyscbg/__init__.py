@@ -340,8 +340,8 @@ def es_search(uuid_json, game_ordersn, current_time, is_history=True):
 def get_yyscbg_prompt(datas, is_lotter=False):
     """获取当前链接数据"""
     _prompt = "暂无历史记录"
-    ssr_flag = datas['ssr_flag']
-    sp_flag = datas['sp_flag']
+    # ssr_flag = datas['ssr_flag']
+    # sp_flag = datas['sp_flag']
     equip_name = datas["equip_name"]
     server_name = datas["server_name"]
     status_des = datas["status_des"]
