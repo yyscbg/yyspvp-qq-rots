@@ -762,19 +762,19 @@ def get_speed_info(data_infos, full_speed=155, x_hero=x_hero):
         },
         "suit_speed": sorted(fast_speed_list, key=lambda e: e["speed_sum"], reverse=True)
     })
-    try:
-        data_yuhun_std = extract_data_cbg(data_infos)
-        if optimize_data_for_cal(data_yuhun_std):
-            dmg_yuhun = pick_dmg_yuhun_all(
-                data_yuhun_std,
-                common_score=8,  # 普通分数
-                special_score=10,  # 逢魔皮分数
-                is_speed_limit=True
-            )
-            json_data.update({"dmg_yuhun": dmg_yuhun})
-    except Exception as e:
-        print(e)
-        json_data.update({"dmg_yuhun": {}})
+    # try:
+    #     data_yuhun_std = extract_data_cbg(data_infos)
+    #     if optimize_data_for_cal(data_yuhun_std):
+    #         dmg_yuhun = pick_dmg_yuhun_all(
+    #             data_yuhun_std,
+    #             common_score=8,  # 普通分数
+    #             special_score=10,  # 逢魔皮分数
+    #             is_speed_limit=True
+    #         )
+    #         json_data.update({"dmg_yuhun": dmg_yuhun})
+    # except Exception as e:
+    #     print(e)
+    #     json_data.update({"dmg_yuhun": {}})
     del json_data["inventory"]
     return json_data
 
