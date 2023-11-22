@@ -45,8 +45,8 @@ shouban_head = [
 cbg_special_skin = {
     "currency_908702": "玉藻前·墨雨胧山兑换券",
     "currency_908703": "空相面灵气·砚隐千面兑换券",
-    "currency_413564": "",
-    "currency_413891": "",
+    "currency_413564": "海原藏心",
+    "currency_413891": "耀世神武",
     "currency_908740": "匣中少女·巧偶谜匣兑换券",
 }
 
