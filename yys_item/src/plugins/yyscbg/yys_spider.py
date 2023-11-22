@@ -7,6 +7,8 @@
 @Detail: 藏宝阁爬虫
 """
 import re
+import time
+
 import requests
 import urllib3
 
@@ -122,24 +124,10 @@ def get_infos_by_kdl(game_ordersn, max_num=5):
             if num >= max_num:
                 break
             num += 1
+            time.sleep(1)
         except Exception as e:
             print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
 
 
 if __name__ == '__main__':
-    url = "https://yys.cbg.163.com/cgi/mweb/equip/3/202207021401616-3-LAYIQNLHGAWRL3"
-    url = "https://yys.cbg.163.com/cgi/mweb/equip/7/202211091201616-7-Z3VMTFBMHISOHI"
-    url = "https://yys.cbg.163.com/cgi/mweb/equip/11/202212090901616-11-4E1Y8DJCKGP6J"
-    game_ordersn = "202207021401616-3-LAYIQNLHGAWRL3"
-    game_ordersn = "202212042101616-12-OTUU52VLMAQHO"  # 战百鬼
-    game_ordersn = "202212031101616-12-ZHGU5BC5FIK5B"  # 百鬼
-    game_ordersn = "202212062301616-7-UJAJOUMZ9VF2HD"
-    game_ordersn = "202212011901616-7-6UJHVYKUPPJ1ZU"
-    game_ordersn = "202212121001616-21-UJ3FHTEZR3AKY"
-    game_ordersn = "202302010401616-3-2F4PRPI0EC2WIH"
-    game_ordersn = "202302051901616-22-XQVQKSGSH7FYT"
-    game_ordersn = "202201030401616-22-J8CZGX6CQYPWC"
-
-    # infos = get_equip_detail(game_ordersn)
-    infos = get_infos_by_kdl(game_ordersn)
-    print(infos)
+    pass

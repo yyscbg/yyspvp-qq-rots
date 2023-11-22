@@ -39,6 +39,7 @@ shouban_head = [
     "玉面妖狐", "大江山之主", "契", "神意御骨", "麓鸣烁浪",
     "倦鸟眠花", "彼岸天光", "年年有余", "金羽焕夜", "星火漫天",
     "星陨之刻", "九尾幽梦", "无垢莲华", "蛇影裁决", "本味初心",
+    "樱缘花梦头像框",
 ]
 # 限定皮肤卷
 cbg_special_skin = {
@@ -72,6 +73,21 @@ yaozhige_list = [
     "随云吟啸", "寇梢含枝", "青羽衔铃", "影山豹形", "隐金游龙",
     "迷金掠蝶", "辰落虚凰", "杏鸣穿金", "流金纸扇·灭",
     "璃金纸伞·蝶", "金凰法杖·咒", "散金箭矢·探",
+]
+
+x_hero = [
+    "犬夜叉", "陆生", "鬼灯", "桔梗", "杀生丸"
+]
+
+tuizhi_head_skin = [
+    "超鬼王·蛇神", "月姬之眷", "涅火蝶舞",
+    "超鬼王·海国之主", "海潮逆涌·激流", "大江山之战·海伐",
+    "超鬼王·大妖试炼", "超鬼王·森林之王", "四季生·惜",
+]
+
+interstage_skin = [
+    ('currency_1500001', '契光水境'),
+    ('currency_1500002', '穹宇垂帘'),
 ]
 
 
@@ -291,18 +307,24 @@ class CbgDataParser:
         return time_str
 
     @staticmethod
-    def cbg_parse(datas, is_yuhun=True):
-        """藏宝阁数据解析"""
+    def cbg_parse(datas, is_yuhun=True, x_hero=x_hero):
+        """
+        解析数据
+        :param datas:  数据
+        :param is_yuhun: 御魂
+        :param x_hero: 联动种类
+        :return:
+        """
         equip = datas.get('equip', None)
         if not equip:
             print("no equip")
             return None
-
         # seller_roleid = equip["seller_roleid"]
         seller_roleid = ""
-        game_ordersn = equip["game_ordersn"]
+        allow_bargain = equip['allow_bargain']
+        game_ordersn = equip['game_ordersn']
         status_desc = equip["status_desc"]
-        equip_desc = equip["equip_desc"]
+        diy_desc = equip.get('diy_desc', "")  # 卖家说
         fair_show_end_time = equip["fair_show_end_time"]  # 公示期
         platform_type = equip["platform_type"]  # 平台类型 1:ios 2:android
         equip_level = equip["equip_level"]  # 等级
@@ -313,7 +335,7 @@ class CbgDataParser:
         price = equip["price"] / 100  # 价格
         seller_name = equip["seller_name"]  # 卖家
         new_roleid = get_md5(str(equip_server_sn) + seller_name)  # 区+名字
-        # selling_time = equip["selling_time"]  # 上架时间
+        # selling_time = equip.get('selling_time')  # 上架时间
         create_time = equip["create_time"]  # 时间
         collect_num = equip["collect_num"]  # 收藏
         equip_desc = json.loads(equip["equip_desc"])
@@ -326,9 +348,10 @@ class CbgDataParser:
         strength = equip_desc.get('strength', 0)  # 体力
         ssr_coin = equip_desc.get('ssr_coin', 0)  # SSR未收录
         sp_coin = equip_desc.get('sp_coin', 0)  # SP未收录
+        ssr_sp_coin = equip_desc.get('currency_490017', 0)  # SP/SSR自选
         gameble_card = equip_desc.get('gameble_card', 0)  # 蓝票
-        equips_summary = equip_desc["equips_summary"]  # 御魂总数
-        level_15 = equip_desc["level_15"]  # 15+御魂
+        equips_summary = equip_desc.get('equips_summary', 0)  # 御魂总数
+        level_15 = equip_desc.get('level_15', 0)  # 15+御魂
         currency_900217 = equip_desc.get('currency_900217', 0)  # 逆鳞
         currency_900218 = equip_desc.get('currency_900218', 0)  # 逢魔之魂
         currency_900041 = equip_desc.get('currency_900041', 0)  # 痴卷
@@ -339,34 +362,36 @@ class CbgDataParser:
             for k, v in lbscards.items():
                 lbscards_sum += int(v["num"])
         skin = equip_desc["skin"]  # 皮肤 dict
+        gamble = skin.get('gamble', [])
+        gamble_list = [_[1] for _ in gamble]
         yard_list = [ty for ty in ty_skin if ty in list(map(lambda x: x[1], skin.get('yard', [])))]  # 庭院
-        yaozhige = int((len(skin["guard"]) - 4) / 2)
         head_skin = equip_desc["head_skin"]  # 头像框
+
+        tuizhi_list = [value for key, value in head_skin.items() if value in tuizhi_head_skin]  # 退治框
         shouban_list = [value for key, value in head_skin.items() if value in shouban_head]  # 手办框
         data_skin_hero = [item[1] for item in skin['ss']]
         dc_list = [name for name in dc_skin if name in data_skin_hero]  # 典藏皮肤
+        ss_skin_list = [v[1] for key, value in equip_desc['skin'].items() for v in value if key == 'ss']  # 式神皮肤
+        yys_skin_list = [v[1] for key, value in equip_desc['skin'].items() for v in value if key == 'yys']  # 主角皮肤
         yzg = equip_desc.get('yzg', {})  # 曜之阁
         yzq = equip_desc.get('currency_900073', 0)  # 曜之契
         yzg_number = (len(yzg.get('effect', [])) + yzq) / 2  # 曜之阁期数
-        head_skin_count = equip_desc["head_skin_count"]
-        ss_skin_count = [v[1] for key, value in equip_desc['skin'].items() for v in value if key == 'ss']  # 式神皮肤总数
-        # 崽战
-        _zaizhan = list(
-            map(
-                lambda x: f"{str(head_skin_count[x[0]]) + x[1] if head_skin_count[x[0]] > 1 else x[1]}" if x[
-                                                                                                               0] in head_skin_count else False,
-                zaizhan_list
-            )
-        )
-        zaizhan_str = ", ".join([_ for _ in _zaizhan if _ is not False])
-        # 氪金
-        _kejin = list(
-            map(
-                lambda x: f"{x[1] + '·(金)' if head_skin_count[x[0]] > 1 else x[1]}" if x[
-                                                                                            0] in head_skin_count else False,
-                kejin_list
-            )
-        )
+        head_skin_count = equip_desc.get('head_skin_count', [])
+        if len(head_skin_count) == 0:
+            _zaizhan = ""
+            zaizhan_str = ""
+            _kejin = []
+            tuizhi_head = []
+        else:
+            # 崽战
+            _zaizhan = [f"{str(head_skin_count[x[0]]) + x[1] if head_skin_count.get(x[0], 0) > 1 else x[1]}" for x in
+                        zaizhan_list if head_skin_count.get(x[0])]
+
+            zaizhan_str = ", ".join([_ for _ in _zaizhan if _ is not False])
+            # 氪金
+            _kejin = [f"{x[1]}·(金)" if head_skin_count.get(x[0], 0) > 1 else x[1] for x in kejin_list if
+                      x[0] in head_skin_count]
+
         yzg_str = f"{int(yzg_number)}期曜之阁" if yzg_number != 0 else ""
         if len(yzg_str) == 0:
             kejin_str = ", ".join([_ for _ in _kejin if _ is not False])
@@ -378,20 +403,44 @@ class CbgDataParser:
             inventory = equip_desc.get('inventory', None)  # 御魂
         # 限定皮肤兑换券
         special_skin_list = equip_desc.get('cbg_special_skin_list', [])
+        special_skin_str = ""
+        special_skin = []
+        if special_skin_list:
+            special_skin = [f"{cbg_special_skin[k]}" for k, v in special_skin_list.items() if v != 0]
+            if special_skin:
+                special_skin_str = ", ".join(special_skin)
+
         cbg_special_skin_list2 = equip_desc.get('cbg_special_skin_list_2', [])
         special_skin_str2 = ""
-        special_skin_str = ""
-        try:
-            if special_skin_list:
-                special_skin = [f"{cbg_special_skin[k]}" for k, v in special_skin_list.items() if v != 0]
-                if special_skin:
-                    special_skin_str = ", ".join(special_skin)
-            if cbg_special_skin_list2:
-                special_skin2 = [f"{cbg_special_skin2[k]}" for k, v in cbg_special_skin_list2.items() if v > 1]
-                if special_skin2:
-                    special_skin_str2 = ", ".join(special_skin2)
-        except Exception as e:
-            print(e)
+        special_skin2 = []
+        if cbg_special_skin_list2:
+            special_skin2 = [f"{cbg_special_skin2[k]}" for k, v in cbg_special_skin_list2.items() if v > 1]
+            if special_skin2:
+                special_skin_str2 = ", ".join(special_skin2)
+        hero_fragment = equip_desc.get('hero_fragment', {})
+        # 所有碎片
+        all_hero_fragments = [{'num': value['num'], 'name': value['name']} for key, value in hero_fragment.items()]
+        # 联动碎片
+        x_num = sum([v['num'] for k, v in hero_fragment.items() if v["name"] in x_hero])
+        hero_history = equip_desc["hero_history"]
+        # 联动已有式神数
+        x_dict = hero_history.get('x', {})
+        x_have_num = len([1 for k, v in x_dict.items() if isinstance(v, list) and v[1] == 1])
+        sp_dict = hero_history.get('sp', {})
+        sp_hava_num = sp_dict.get('got', 0)
+        ssr_dict = hero_history.get('ssr', {})
+        ssr_hava_num = ssr_dict.get('got', 0)
+        # sp_flag = 1
+        # ssr_flag = 1
+        # if sp_dict.get('got', 0) != sp_dict.get('all', 1):
+        #     sp_flag = -1
+        # if ssr_dict.get('got', 0) != ssr_dict.get('all', 1):
+        #     ssr_flag = -1
+        # 幕间皮肤
+        interstage_skin_list = [_[1] for _ in interstage_skin if equip_desc.get(_[0], 0)]
+        # 所有头像框
+        # all_skin = equip_desc
+        # 所有皮肤
 
         # gouyu_card = equip_desc.get('gouyu_card', 0)                          # 太鼓
         # pvp_score = equip_desc["pvp_score"]                                   # 斗技分数
@@ -406,17 +455,11 @@ class CbgDataParser:
         # currency_906058 = equip_desc.get('currency_906058', 0)                # 皮肤卷
         # currency_906058 = equip_desc.get('currency_906058', 0)                # sp皮肤卷
         # currency_900007 = equip_desc.get('currency_900007', 0)                # 百鬼夜行门票
-        hero_history = equip_desc["hero_history"]
-        sp_dict = hero_history.get('sp', {})
-        ssr_dict = hero_history.get('ssr', {})
-        sp_flag = 1
-        ssr_flag = 1
-        if sp_dict.get('got', 0) != sp_dict.get('all', 1):
-            sp_flag = -1
-        if ssr_dict.get('got', 0) != ssr_dict.get('all', 1):
-            ssr_flag = -1
+
         return {
-            "game_ordersn": game_ordersn,
+            # "selling_time": selling_time,
+            "diy_desc": diy_desc,
+            "game_ordersn": game_ordersn, "allow_bargain": 1 if allow_bargain else 0,
             "new_roleid": new_roleid, "seller_roleid": seller_roleid,
             "equip_name": seller_name, "server_name": server_name,
             "create_time": create_time, "status_des": status_desc,
@@ -432,18 +475,31 @@ class CbgDataParser:
             "ar_gamble_card": ar_gamble_card, "inventory": inventory,
             "lbscards_sum": lbscards_sum, "fengzidu": fengzidu,
             "yard_list": yard_list,
-            "yaozhige": yaozhige if yaozhige > 0 else None,
+            "yaozhige": yzg_number if yzg_number > 0 else 0,
             "shouban_list": shouban_list,
             "dc_list": dc_list,
             "zaizhan_str": zaizhan_str,
+            "zaizhan_list": _zaizhan,
             "kejin_str": kejin_str,
-            "ss_skin_count": len(ss_skin_count) if isinstance(ss_skin_count, list) else 0,
+            "tuizhi_list": tuizhi_list,
+            "head_skin_list": [value for key, value in head_skin.items()],
+            "yys_skin_list": yys_skin_list,
+            "ss_skin_list": ss_skin_list,
+            "ss_skin_count": len(ss_skin_list) if isinstance(ss_skin_list, list) else 0,
             "sp_coin": sp_coin,
             "ssr_coin": ssr_coin,
+            "ssr_sp_coin": ssr_sp_coin,
             "special_skin_str1": special_skin_str,
+            "special_skin_list1": special_skin,
             "special_skin_str2": special_skin_str2,
-            "ssr_flag": ssr_flag,
-            "sp_flag": sp_flag
+            "special_skin_list2": special_skin2,
+            "all_hero_fragments": all_hero_fragments,  # 所有碎片
+            "x_num": x_num,  # 联动碎片和
+            "x_have_num": x_have_num,  # 联动式神数量
+            "sp_hava_num": sp_hava_num,  # sp式神数量
+            "ssr_hava_num": ssr_hava_num,  # ssr式神数量
+            "gamble_list": gamble_list,  # 召唤屋
+            "interstage_skin_list": interstage_skin_list,  # 幕间
         }
 
 

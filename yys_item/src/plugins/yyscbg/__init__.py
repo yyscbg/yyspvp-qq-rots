@@ -13,12 +13,13 @@ from nonebot import get_driver, logger, get_bot, on_command, require
 from nonebot.matcher import Matcher
 from nonebot.adapters import Message, Event
 from nonebot.adapters.onebot.v11 import GroupMessageEvent, Bot, MessageSegment
-from configs.all_config import mysql_config, proxy_url, http_prefix, redis_config
+from configs.all_config import mysql_config, proxy_url, http_prefix, redis_config, yys_history_mappings, es_config
 from utils.yys_time import get_now, get_before_Or_after_few_times
 from utils.yys_proxy import ProxyTool
 from utils.common_functions import select_sql, check_sale_flag, format_number, get_yyscbg_url
 from utils.yys_mysql import YysMysql
 from utils.yys_redis import YysRedis
+from utils.yys_elasticsearch import ElasticSearch
 from .yys_spider import get_equip_detail, get_infos_by_kdl as get_infos
 from .yys_parse import get_speed_info, CbgDataParser, find_yuhun_uuid, choose_best_uuid
 from .yys_cal_about import *
@@ -42,6 +43,11 @@ redis_client = YysRedis(
     password=redis_config["password"],
     db=5
 )
+
+es_ip = es_config["es_ip"]
+es_auth = es_config["auth"]
+history_mappings = yys_history_mappings
+history_index_name = "yys_history_sale"
 
 
 async def group_checker(event: Event) -> bool:
@@ -141,7 +147,12 @@ def get_compara_infos(game_ordersn, is_lotter=False, is_infos=False):
         json1 = get_infos_data(infos1)
 
         try:
-            history_url, history_price = find_history_infos(json1)
+            datas = get_speed_info(infos1)
+            history_url, history_price, history_time = es_search(
+                datas["uuid_json"],
+                datas['game_ordersn'],
+                datas['create_time']
+            )
         except:
             history_url, history_price = ("暂无", "暂无")
         if is_lotter:
@@ -216,86 +227,114 @@ def check_vip_infos(user_id):
 proxy_handle = ProxyTool(proxy_url, http_prefix)
 
 
-# def get_infos(game_ordersn, max_num=5):
-#     global proxy_handle
-#     for i in range(10):
-#         try:
-#             if i < max_num:
-#                 proxies = proxy_handle.get_proxy()
-#             else:
-#                 proxies = None
-#             infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=5)
-#             if infos:
-#                 return infos
-#             proxy_handle.get_proxies()
-#         except Exception as e:
-#             print(f"{e}: 刷新代理: {proxies}")
-#     return False
+def parse_es_data(infos):
+    """解析es数据"""
+    ret = []
+    if infos.get("hits", False) and infos["hits"].get('total', False) and infos["hits"]["total"]["value"] >= 1:
+        hits = infos["hits"]["hits"]
+        for hit in hits:
+            _source = hit["_source"]
+            ret.append(_source)
+    return ret
 
 
-def find_history_infos(infos):
-    equip_name = infos["equip_name"]
-    server_name = infos["server_name"]
-    create_time = infos["create_time"]
-    game_ordersn = infos["game_ordersn"]
-    sql = f"""
-            SELECT
-            game_ordersn,
-            equip_name,
-            server_name,
-            price,
-            create_time,
-            new_roleid
-        FROM
-            yys_cbg.all_cbg_url 
-        WHERE
-            new_roleid IN ( SELECT new_roleid FROM yys_cbg.all_cbg_url WHERE game_ordersn = '{game_ordersn}' ) 
-            AND status_des = 3 
-            AND game_ordersn != '{game_ordersn}' 
-            AND create_time <= '{create_time}' 
-        ORDER BY
-            create_time DESC;
-    """
-    print(sql)
-    _history = select_sql(sql)
-    if _history:
-        history_url = get_yyscbg_url(_history[0]["game_ordersn"])
-        history_price = _history[0]["price"]
-        return history_url, history_price
-    # 方法二
-    parse = CbgDataParser()
-    yuhun_json = parse.init_yuhun(infos["inventory"])
-    data_info = parse.sort_pos(yuhun_json)
-    uuid_infos = find_yuhun_uuid(data_info)
-    uuid_json = choose_best_uuid(uuid_infos)
-
-    my_sql = YysMysql(cursor_type=True)
-    mysql_handle = my_sql.sql_open(mysql_config)
-    for _uuid in uuid_json:
-        sql = f"""  
-            SELECT 
-                game_ordersn, seller_roleid, equip_name, server_name, status_des, update_time, 
-                price, create_time, es_flag, new_roleid
-            FROM yys_cbg.all_cbg_url  
-            WHERE JSON_CONTAINS(uuid_json, '"{_uuid}"')  
-                and status_des=3  
-                and game_ordersn!='{game_ordersn}'  
-                and create_time<='{create_time}'  
-                order by create_time desc
-        """
-        print(sql)
-        _history = my_sql.select_mysql_record(mysql_handle, sql)
-        if _history:
-            history_url = get_yyscbg_url(_history[0]["game_ordersn"])
-            history_price = _history[0]["price"]
-            break
+def es_search(uuid_json, game_ordersn, current_time, is_history=True):
+    history_url = "暂无"
+    history_price = "暂无"
+    history_time = None
+    if not uuid_json:
+        return history_url, history_price, history_time
+    es_object = ElasticSearch(es_ip, auth=es_auth)
+    es_object.es_create(index_name=history_index_name, body=history_mappings)
+    # 设置窗口必须
+    es_object.es_set_max_windows(max_num=50000000)
+    if is_history:
+        es_body = {
+            "track_total_hits": True,
+            "_source": ["*"],
+            "from": 0,
+            "size": 1,
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "terms": {
+                                "uuid_json": uuid_json
+                            }
+                        },
+                        {
+                            "match": {
+                                "status_des": 3
+                            }
+                        },
+                        {
+                            "range": {
+                                "create_time": {
+                                    "lt": current_time
+                                }
+                            }
+                        }
+                    ],
+                    "must_not": {
+                        "term": {
+                            "game_ordersn": game_ordersn
+                        }
+                    }
+                }
+            },
+            "sort": {
+                "create_time": {
+                    "order": "desc"
+                }
+            }
+        }
     else:
-        # 如果未找到历史信息，则返回 None
-        history_url = "暂无"
-        history_price = "暂无"
-
-    mysql_handle.close()
-    return history_url, history_price
+        es_body = {
+            "track_total_hits": True,
+            "_source": ["*"],
+            "from": 0,
+            "size": 1,
+            "query": {
+                "bool": {
+                    "must": [
+                        {
+                            "terms": {
+                                "uuid_json": uuid_json
+                            }
+                        },
+                        {
+                            "range": {
+                                "create_time": {
+                                    "lt": current_time
+                                }
+                            }
+                        }
+                    ],
+                    "must_not": {
+                        "term": {
+                            "game_ordersn": game_ordersn
+                        }
+                    }
+                }
+            },
+            "sort": {
+                "create_time": {
+                    "order": "desc"
+                }
+            }
+        }
+    try:
+        infos = es_object.es_search(index_name=history_index_name, body=es_body)
+        res = parse_es_data(infos)
+        if len(res) > 0:
+            res = res[0]
+            history_url = get_yyscbg_url(res["game_ordersn"])
+            history_price = res["price"]
+            history_time = res["create_time"]
+    except Exception as e:
+        logger.error(e)
+    finally:
+        return history_url, history_price, history_time
 
 
 def get_yyscbg_prompt(datas, is_lotter=False):
@@ -335,26 +374,15 @@ def get_yyscbg_prompt(datas, is_lotter=False):
             return False
     # 查找历史
     try:
-        history_url, history_price = find_history_infos(datas)
+        # history_url, history_price = find_history_infos(datas)
+        history_url, history_price, history_time = es_search(
+            datas["uuid_json"],
+            datas['game_ordersn'],
+            datas['create_time']
+        )
     except:
         history_url, history_price = ("暂无", "暂无")
     print(history_url, history_price)
-    if is_lotter:
-        is_ok = False
-        # 勾玉、魂玉、强15+条件
-        if hunyu >= 1000 or level_15 >= 3500 or goyu >= 300000:
-            is_ok = True
-
-        if is_ok is False:
-            if history_price != '暂无':
-                if int(price) > 1.15 * int(history_price):
-                    return _prompt
-                elif int(history_price) <= 800:
-                    return _prompt
-            else:
-                if int(price) <= 1000 and (sp_flag != 1 or ssr_flag != 1):
-                    return _prompt
-
     currency_900217 = format_number(datas['currency_900217'])  # 蛇皮
     goyu = format_number(datas["goyu"])
     hunyu = format_number(datas["hunyu"])
