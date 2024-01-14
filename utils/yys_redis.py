@@ -71,9 +71,10 @@ class YysRedis:
             self.set_redis_type(HEAD)
         else:
             self.set_redis_type(TAIL)
-        value_str = json.dumps(value, ensure_ascii=False)
+        if isinstance(value, dict) or isinstance(value, list):
+            value = json.dumps(value, ensure_ascii=False)
         try:
-            exec(f'self.conn.{self.redis_type}push(name, value_str)')
+            exec(f'self.conn.{self.redis_type}push(name, value)')
         except Exception as e:
             print(e)
             return False
@@ -103,6 +104,12 @@ class YysRedis:
             print(str(e))
             return False
         return result
+
+    def set(self, name, value, **kwargs):
+        self.conn.set(name, value, **kwargs)
+
+    def get(self, name):
+        return self.conn.get(name)
 
     def llen(self, name):
         """

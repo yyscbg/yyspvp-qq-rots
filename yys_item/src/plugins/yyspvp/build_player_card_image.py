@@ -10,8 +10,8 @@ import os
 import time
 from functools import reduce
 
-from build_image import BuildImage
-from picture_watermark import Font, Watermark
+from .build_image import BuildImage
+from .picture_watermark import Font, Watermark
 
 base_path = reduce(lambda x, _: os.path.dirname(x), range(4), __file__)
 

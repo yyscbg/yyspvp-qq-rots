@@ -7,7 +7,18 @@
 @Detail: 藏宝阁爬虫
 """
 import re
+import time
+
 import requests
+import urllib3
+
+try:
+    from configs.all_config import kdl_proxy
+except ImportError:
+    raise ImportError
+
+urllib3.disable_warnings()
+requests.adapters.DEFAULT_RETRIES = 5
 
 
 class YysCbgSpider:
@@ -17,21 +28,20 @@ class YysCbgSpider:
 
     def __init__(self):
         self.headers = {
-            'authority': 'yys.cbg.163.com',
-            'pragma': 'no-cache',
-            'cache-control': 'no-cache',
-            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
-            'accept': 'application/json, text/javascript, */*; q=0.01',
-            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'x-requested-with': 'XMLHttpRequest',
-            'sec-ch-ua-mobile': '?0',
-            'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36',
-            'sec-ch-ua-platform': '"macOS"',
-            'origin': 'https://yys.cbg.163.com',
-            'sec-fetch-site': 'same-origin',
-            'sec-fetch-mode': 'cors',
-            'sec-fetch-dest': 'empty',
-            'accept-language': 'zh-CN,zh;q=0.9',
+            # 'authority': 'yys.cbg.163.com',
+            # 'pragma': 'no-cache',
+            # 'cache-control': 'no-cache',
+            # 'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="96", "Google Chrome";v="96"',
+            # 'accept': 'application/json, text/javascript, */*; q=0.01',
+            # 'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+            # 'x-requested-with': 'XMLHttpRequest',
+            # 'sec-ch-ua-mobile': '?0',
+            # 'sec-ch-ua-platform': '"macOS"',
+            # 'origin': 'https://yys.cbg.163.com',
+            # 'sec-fetch-site': 'same-origin',
+            # 'sec-fetch-mode': 'cors',
+            # 'sec-fetch-dest': 'empty',
+            # 'accept-language': 'zh-CN,zh;q=0.9',
         }
 
     @staticmethod
@@ -44,26 +54,38 @@ class YysCbgSpider:
         # 兼容区服
         return re.findall(r"[0-9]+-\d{1, 2}-[0-9A-Z]+", content)
 
-    def get_data(self, data, **kwargs):
+    def get_data(self, data, max_times=3, **kwargs):
         """
         获取数据
         :param data:
         :param kwargs:
         :return:
         """
+        _ctimes = 0
+        # while True:
         try:
+            _ctimes += 1
             headers = kwargs.pop("headers", self.headers)
+            # print(headers, data)
             response = requests.post(
                 'https://yys.cbg.163.com/cgi/api/get_equip_detail',
                 data=data,
                 headers=headers,
                 **kwargs
             )
+
             if response.status_code == 200:
-                return response.json()
-            return None
-        except Exception as e:
-            print(e)
+                res = response.json()
+                if res.get("status", -1) != 1:
+                    # continue
+                    return False
+                return res
+            print(response.status_code)
+            print(response.json())
+        except requests.exceptions.ConnectionError:
+            if _ctimes >= max_times:
+                return False
+            # res.status_code = "Connection refused"
 
 
 def get_equip_detail(ordersn: str = None, cbg_url: str = None, **kwargs):
@@ -85,11 +107,27 @@ def get_equip_detail(ordersn: str = None, cbg_url: str = None, **kwargs):
     return spider.get_data(data=payload, **kwargs)
 
 
+def get_infos_by_kdl(game_ordersn, max_num=5):
+    num = 0
+    while True:
+        try:
+            username = kdl_proxy["username"]
+            password = kdl_proxy["password"]
+            proxy_ip = kdl_proxy["proxy_ip"]
+            proxies = {
+                "http": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip},
+                "https": "http://%(user)s:%(pwd)s@%(proxy)s/" % {"user": username, "pwd": password, "proxy": proxy_ip}
+            }
+            infos = get_equip_detail(game_ordersn, proxies=proxies, timeout=10)
+            if infos:
+                return infos
+            if num >= max_num:
+                break
+            num += 1
+            time.sleep(1)
+        except Exception as e:
+            print(f"{e}: 刷新代理: {proxies}: {game_ordersn}")
+
+
 if __name__ == '__main__':
-    url = "https://yys.cbg.163.com/cgi/mweb/equip/12/202210302101616-12-Q4GEFZSWWJUNV"
-    game_ordersn = "202210302101616-12-Q4GEFZSWWJUNV"
-    infos = get_equip_detail(game_ordersn)
-    print(infos)
-    # from yyscbg.yys_io import write_local_file, write_infos_to_redis
-    # write_local_file(infos, game_ordersn + ".json")
-    # write_infos_to_redis([infos], "yyscbg_json")
+    pass
